@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-DB_NAME = "invoice.db"
+DB_NAME = "Data/invoice.db"
 
 def get_connection():
     return sqlite3.connect(DB_NAME)

@@ -1,7 +1,7 @@
 import sqlite3
 
 def create_tables():
-    conn = sqlite3.connect("invoice.db")
+    conn = sqlite3.connect("Data/invoice.db")
     cursor = conn.cursor()
 
     # Create Vendors Table
