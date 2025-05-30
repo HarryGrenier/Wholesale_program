@@ -74,19 +74,14 @@ class NewInvoiceWindow(tk.Toplevel):
     def setup_table(self):
         columns = ("vendor", "item", "quantity", "price", "info")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
-        self.tree.tag_configure('oddrow', background='#f0f0ff')
-        self.tree.tag_configure('evenrow', background='#ffffff')
         for col in columns:
             self.tree.heading(col, text=col.title())
             self.tree.column(col, stretch=True)
         self.tree.pack(fill='both', expand=True, padx=10, pady=10)
-        self.tree.bind("<Double-1>", self.on_double_click)
-
 
     def setup_footer(self):
         frame = ttk.Frame(self)
         frame.pack(fill='x', padx=10, pady=10)
-        ttk.Button(frame, text="Delete Selected Row", command=self.delete_selected_row).pack(side="left")
         ttk.Button(frame, text="Save Invoice", command=self.save_invoice).pack(side="right")
 
     def update_items_menu(self, event=None):
@@ -157,59 +152,3 @@ class NewInvoiceWindow(tk.Toplevel):
                 self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save invoice: {e}")
-
-
-    def on_double_click(self, event):
-        region = self.tree.identify('region', event.x, event.y)
-        if region != 'cell':
-            return
-        row_id = self.tree.identify_row(event.y)
-        col_id = self.tree.identify_column(event.x)
-        col = int(col_id.replace('#', '')) - 1
-        if col not in [2, 3, 4]:
-            return  # Only quantity, price, info
-
-        x, y, w, h = self.tree.bbox(row_id, col_id)
-        value = self.tree.item(row_id)['values'][col]
-        entry = tk.Entry(self.tree)
-        entry.place(x=x, y=y, width=w, height=h)
-        entry.insert(0, value)
-        entry.focus()
-
-        def save_edit(event):
-            new_val = entry.get()
-            values = list(self.tree.item(row_id)['values'])
-            values[col] = new_val
-            self.tree.item(row_id, values=values)
-
-            # Update items_data — match by row index
-            index = self.tree.index(row_id)
-            if col == 2:
-                self.items_data[index]["quantity"] = int(new_val)
-            elif col == 3:
-                self.items_data[index]["unit_price"] = float(new_val.replace('$', '').strip())
-            elif col == 4:
-                self.items_data[index]["optional_info"] = new_val
-
-            entry.destroy()
-
-        entry.bind('<Return>', save_edit)
-        entry.bind('<FocusOut>', lambda e: entry.destroy())
-
-
-    def delete_selected_row(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("No Selection", "Please select a row to delete.")
-            return
-
-        confirm = messagebox.askyesno("Confirm", "Delete selected row?")
-        if not confirm:
-            return
-
-        for row_id in selected:
-            index = self.tree.index(row_id)
-            if index < len(self.items_data):
-                del self.items_data[index]
-            self.tree.delete(row_id)
-
