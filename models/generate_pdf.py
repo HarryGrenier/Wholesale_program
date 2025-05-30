@@ -31,7 +31,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
     c.drawString(4 * inch, height - 1.25 * inch, f"Order Date: {order_date}")
 
     # Table headers
-    headers = ["Vendor", "Item ID", "Item Name", "Info", "Qty", "Unit $", "Ext. Cost"]
+    headers = ["Vendor", "Item Code", "Item Name", "Info", "Qty", "Unit $", "Ext. Cost"]
     col_widths = [1.2, 0.8, 1.5, 1.5, 0.5, 0.7, 0.8]
     y = height - 1.75 * inch
 
@@ -69,7 +69,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
             ext_cost = item["quantity"] * item["unit_price"]
             row = [
                 vendor,
-                item["item_id"],
+                item["item_code"],
                 item["item_name"],
                 item["optional_info"],
                 item["quantity"],
@@ -85,6 +85,9 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
                 y = height - 1 * inch
                 y = draw_table_header(y)
 
+
+        # Underline to separate vendors
+        c.line(0.5 * inch, y + 0.15 * inch, 7.5 * inch, y + 0.15 * inch)
         # Subtotal row
         y = draw_row(y, ["", "", "", "Subtotal:", subtotal_qty, "", f"{subtotal_cost:.2f}"], font="Helvetica-Bold")
         y -= 0.1 * inch

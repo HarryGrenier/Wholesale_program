@@ -78,11 +78,15 @@ class NewInvoiceWindow(tk.Toplevel):
             self.tree.heading(col, text=col.title())
             self.tree.column(col, stretch=True)
         self.tree.pack(fill='both', expand=True, padx=10, pady=10)
+        self.tree.bind('<Double-1>', self.on_tree_double_click)
 
     def setup_footer(self):
         frame = ttk.Frame(self)
         frame.pack(fill='x', padx=10, pady=10)
+        frame = ttk.Frame(self)
+        frame.pack(fill='x', padx=10, pady=10)
         ttk.Button(frame, text="Save Invoice", command=self.save_invoice).pack(side="right")
+        ttk.Button(frame, text="Delete row", command=self.delete_selected_row).pack(side="left")
 
     def update_items_menu(self, event=None):
         selected_vendor = self.vendor_var.get()
@@ -152,3 +156,49 @@ class NewInvoiceWindow(tk.Toplevel):
                 self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save invoice: {e}")
+
+    def delete_selected_row(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Select a row to delete.")
+            return
+        index = self.tree.index(selected[0])
+        self.tree.delete(selected[0])
+        del self.items_data[index]
+
+    def on_tree_double_click(self, event):
+        item_id = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+        if not item_id or not column:
+            return
+        col_index = int(column[1:]) - 1
+        if col_index < 0:
+            return
+
+        self.tree.selection_set(item_id)
+        item_values = list(self.tree.item(item_id, "values"))
+        col_value = item_values[col_index]
+
+        entry_popup = tk.Entry(self.tree)
+        entry_popup.insert(0, col_value)
+        entry_popup.focus()
+
+        def on_confirm(event=None):
+            new_val = entry_popup.get()
+            entry_popup.destroy()
+            item_values[col_index] = new_val
+            self.tree.item(item_id, values=item_values)
+            row_index = self.tree.index(item_id)
+            keys = ["vendor_id", "item_id", "quantity", "unit_price", "optional_info"]
+            if col_index == 2:
+                self.items_data[row_index]["quantity"] = int(new_val)
+            elif col_index == 3:
+                self.items_data[row_index]["unit_price"] = float(new_val.replace("$", "").strip())
+            elif col_index == 4:
+                self.items_data[row_index]["optional_info"] = new_val
+
+        entry_popup.bind("<Return>", on_confirm)
+        entry_popup.bind("<FocusOut>", lambda e: entry_popup.destroy())
+        bbox = self.tree.bbox(item_id, column)
+        if bbox:
+            entry_popup.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])

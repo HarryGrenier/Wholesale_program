@@ -277,7 +277,7 @@ class EditInvoiceWindow(tk.Toplevel):
         for row in raw_items:
             invoice_items.append({
                 "vendor_name": row["vendor_name"],
-                "item_id": row["item_id"],
+                "item_code": row["item_code"],
                 "item_name": row["item_name"],
                 "optional_info": row["optional_info"],
                 "quantity": row["quantity"],

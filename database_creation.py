@@ -15,10 +15,11 @@ def create_tables():
     # Create Items Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            vendor_id INTEGER NOT NULL,
-            FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        vendor_id INTEGER NOT NULL,
+        item_code TEXT UNIQUE,
+        FOREIGN KEY (vendor_id) REFERENCES vendors(id)
         )
     ''')
 

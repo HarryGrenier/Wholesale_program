@@ -26,10 +26,10 @@ def get_all_vendors():
 # Item Operations
 # -------------------
 
-def add_item(name, vendor_id):
+def add_item(name, vendor_id, item_code):
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO items (name, vendor_id) VALUES (?, ?)", (name, vendor_id))
+        cursor.execute("INSERT INTO items (name, vendor_id, item_code) VALUES (?, ?, ?)", (name, vendor_id, item_code))
         conn.commit()
 
 def get_items_by_vendor(vendor_id):
@@ -79,12 +79,16 @@ def get_all_invoices():
 
 def get_invoice_items(invoice_id):
     with get_connection() as conn:
-        conn.row_factory = sqlite3.Row  # ✅ THIS IS NEEDED
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT items.id as item_id, vendors.name as vendor_name,
-                   items.name as item_name, ii.optional_info,
-                   ii.quantity, ii.unit_price
+            SELECT ii.id as item_id,
+                   vendors.name as vendor_name,
+                   items.name as item_name,
+                   ii.quantity,
+                   ii.unit_price,
+                   ii.optional_info,
+                   items.item_code as item_code
             FROM invoice_items ii
             JOIN items ON ii.item_id = items.id
             JOIN vendors ON items.vendor_id = vendors.id
@@ -131,3 +135,13 @@ def get_invoice_details(invoice_id):
         cursor.execute("SELECT id, date FROM invoices WHERE id = ?", (invoice_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+
+
+def add_item_code_column():
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("ALTER TABLE items ADD COLUMN item_code TEXT UNIQUE")
+            conn.commit()
+        except Exception:
+            pass  # Already added

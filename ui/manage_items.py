@@ -36,6 +36,8 @@ class ManageItemsWindow(tk.Toplevel):
 
         self.item_name_var = tk.StringVar()
         ttk.Entry(entry_frame, textvariable=self.item_name_var, width=30).pack(side="left", padx=5)
+        self.item_code_var = tk.StringVar()
+        ttk.Entry(entry_frame, textvariable=self.item_code_var, width=15).pack(side="left", padx=5)
 
         self.vendor_select_var = tk.StringVar()
         self.vendor_select_menu = ttk.Combobox(entry_frame, textvariable=self.vendor_select_var, state="readonly", width=20)
@@ -74,6 +76,10 @@ class ManageItemsWindow(tk.Toplevel):
         self.vendor_select_var.set("")
 
     def on_select_item(self, event=None):
+        if len(item) > 3:
+            item = self.filtered_items[index]
+        if len(item) > 3:
+            self.item_code_var.set(item[3])
         selection = self.item_listbox.curselection()
         if not selection:
             return
@@ -95,8 +101,16 @@ class ManageItemsWindow(tk.Toplevel):
             messagebox.showerror("Error", "Invalid vendor selected.")
             return
         try:
-            database.add_item(name, vendor_id)
+            item_code = self.item_code_var.get().strip()
+            if not item_code:
+                messagebox.showwarning("Missing Code", "Enter an item code.")
+                return
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not add item: {e}")
+        try:
+            database.add_item(name, vendor_id, item_code)
             self.refresh_item_list()
+        
         except Exception as e:
             messagebox.showerror("Error", f"Could not add item: {e}")
 
