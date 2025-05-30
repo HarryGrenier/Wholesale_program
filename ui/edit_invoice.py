@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from models import database
@@ -6,17 +7,17 @@ class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, on_close=None):
         super().__init__(master)
         self.title("Edit Invoice")
-        self.geometry("1200x650")
+        self.geometry("1200x700")
         self.on_close = on_close
 
         self.invoices = database.get_all_invoices()
         self.selected_invoice_id = None
         self.invoice_items = []
-        self.tree_full_data = {}  # row_id -> item dict
+        self.tree_full_data = {}
+        self.deleted_ids = set()
 
         self.setup_invoice_selector()
         self.setup_treeview()
-        self.setup_edit_fields()
         self.setup_new_row_entry()
         self.setup_buttons()
 
@@ -33,30 +34,44 @@ class EditInvoiceWindow(tk.Toplevel):
 
     def setup_treeview(self):
         columns = ("vendor", "item", "quantity", "price", "optional_info")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)
         for col in columns:
             self.tree.heading(col, text=col.replace("_", " ").title())
             self.tree.column(col, anchor="center")
         self.tree.pack(fill='both', expand=True, padx=10, pady=10)
 
-    def setup_edit_fields(self):
-        frame = ttk.Frame(self)
-        frame.pack(fill='x', padx=10, pady=5)
+        def on_double_click(event):
+            region = self.tree.identify('region', event.x, event.y)
+            if region != 'cell': return
+            row_id = self.tree.identify_row(event.y)
+            col_id = self.tree.identify_column(event.x)
+            col = int(col_id.replace('#', '')) - 1
+            if col not in [2, 3, 4]: return
+            x, y, w, h = self.tree.bbox(row_id, col_id)
+            value = self.tree.item(row_id)['values'][col]
+            entry = tk.Entry(self.tree)
+            entry.place(x=x, y=y, width=w, height=h)
+            entry.insert(0, value)
+            entry.focus()
 
-        self.quantity_var = tk.IntVar()
-        self.price_var = tk.DoubleVar()
-        self.info_var = tk.StringVar()
+            def save_edit(event):
+                new_val = entry.get()
+                values = list(self.tree.item(row_id)['values'])
+                values[col] = new_val
+                self.tree.item(row_id, values=values)
+                if row_id in self.tree_full_data:
+                    if col == 2:
+                        self.tree_full_data[row_id]['quantity'] = int(new_val)
+                    elif col == 3:
+                        self.tree_full_data[row_id]['unit_price'] = float(new_val)
+                    elif col == 4:
+                        self.tree_full_data[row_id]['optional_info'] = new_val
+                entry.destroy()
 
-        ttk.Label(frame, text="Quantity:").grid(row=0, column=0)
-        ttk.Entry(frame, textvariable=self.quantity_var, width=10).grid(row=0, column=1, padx=5)
+            entry.bind('<Return>', save_edit)
+            entry.bind('<FocusOut>', lambda e: entry.destroy())
 
-        ttk.Label(frame, text="Unit Price:").grid(row=0, column=2)
-        ttk.Entry(frame, textvariable=self.price_var, width=10).grid(row=0, column=3, padx=5)
-
-        ttk.Label(frame, text="Optional Info:").grid(row=0, column=4)
-        ttk.Entry(frame, textvariable=self.info_var, width=40).grid(row=0, column=5, padx=5)
-
-        ttk.Button(frame, text="Update Selected Row", command=self.update_selected_row).grid(row=0, column=6, padx=5)
+        self.tree.bind("<Double-1>", on_double_click)
 
     def setup_new_row_entry(self):
         frame = ttk.LabelFrame(self, text="Add New Item")
@@ -96,28 +111,6 @@ class EditInvoiceWindow(tk.Toplevel):
         ttk.Button(frame, text="Export Invoice", command=self.export_invoice).pack(side="left", padx=5)
         ttk.Button(frame, text="Save Changes", command=self.save_changes).pack(side="right")
 
-    def load_invoice_items(self, event=None):
-        selection = self.invoice_menu.get()
-        if not selection:
-            return
-
-        invoice_index = self.invoice_menu.current()
-        self.selected_invoice_id = self.invoices[invoice_index][0]
-
-        self.tree.delete(*self.tree.get_children())
-        self.tree_full_data.clear()
-        self.invoice_items = database.get_invoice_items(self.selected_invoice_id)
-
-        for item in self.invoice_items:
-            visible = item[1:]
-            row_id = self.tree.insert("", "end", values=visible)
-            self.tree_full_data[row_id] = {
-                "existing_id": item[0],
-                "quantity": item[3],
-                "unit_price": item[4],
-                "optional_info": item[5]
-            }
-
     def update_item_dropdown(self, event=None):
         selected_vendor = self.new_vendor_var.get()
         vendor_id = next((v[0] for v in self.vendor_list if v[1] == selected_vendor), None)
@@ -149,6 +142,14 @@ class EditInvoiceWindow(tk.Toplevel):
             "optional_info": info,
             "existing_id": None
         }
+        self.tree_full_data[row_id] = {
+            "vendor_id": vendor_id,
+            "item_id": item_id,
+            "quantity": qty,
+            "unit_price": price,
+            "optional_info": info,
+            "existing_id": None
+        }
 
         self.new_vendor_var.set("")
         self.new_item_var.set("")
@@ -156,30 +157,38 @@ class EditInvoiceWindow(tk.Toplevel):
         self.new_price_var.set(0.0)
         self.new_info_var.set("")
 
-    def update_selected_row(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("No Selection", "Please select a row to update.")
+    def load_invoice_items(self, event=None):
+        selection = self.invoice_menu.get()
+        if not selection:
             return
 
-        try:
-            quantity = self.quantity_var.get()
-            price = self.price_var.get()
-            info = self.info_var.get()
+        invoice_index = self.invoice_menu.current()
+        self.selected_invoice_id = self.invoices[invoice_index][0]
 
-            if quantity < 0 or price < 0:
-                raise ValueError
+        self.tree.delete(*self.tree.get_children())
+        self.tree_full_data.clear()
+        self.invoice_items = database.get_invoice_items(self.selected_invoice_id)
 
-            row_id = selected[0]
-            values = self.tree.item(row_id, "values")
-            updated = (values[0], values[1], quantity, price, info)
-            self.tree.item(row_id, values=updated)
-            self.tree_full_data[row_id]["quantity"] = quantity
-            self.tree_full_data[row_id]["unit_price"] = price
-            self.tree_full_data[row_id]["optional_info"] = info
+        for item in self.invoice_items:
+            item_id = item[0]
+            vendor_name = item[1]
+            item_name = item[2]
+            quantity = item[3]
+            unit_price = item[4]
+            optional_info = item[5]
 
-        except Exception:
-            messagebox.showerror("Invalid Input", "Enter valid quantity and unit price.")
+            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info))
+            self.tree_full_data[row_id] = {
+                "existing_id": item_id,
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "optional_info": optional_info
+            }
+
+        first = self.tree.get_children()
+        if first:
+            self.tree.selection_set(first[0])
+            self.tree.focus(first[0])
 
     def delete_selected_row(self):
         selected = self.tree.selection()
@@ -192,9 +201,12 @@ class EditInvoiceWindow(tk.Toplevel):
             return
 
         for row_id in selected:
-            self.tree.delete(row_id)
             if row_id in self.tree_full_data:
+                existing_id = self.tree_full_data[row_id].get("existing_id")
+                if existing_id is not None:
+                    self.deleted_ids.add(existing_id)
                 del self.tree_full_data[row_id]
+            self.tree.delete(row_id)
 
     def save_changes(self):
         if not self.selected_invoice_id:
@@ -227,7 +239,7 @@ class EditInvoiceWindow(tk.Toplevel):
                 })
 
         try:
-            database.update_invoice(self.selected_invoice_id, user_info="", items=updated_items)
+            database.update_invoice(self.selected_invoice_id, user_info="", items=updated_items, deleted_ids=self.deleted_ids)
             messagebox.showinfo("Success", "Invoice updated successfully.")
             if self.on_close:
                 self.on_close()
@@ -247,7 +259,7 @@ class EditInvoiceWindow(tk.Toplevel):
             return
 
         lines = []
-        lines.append(f"Invoice Export\n{'='*40}")
+        lines.append(f"Invoice Export{'='*40}")
         lines.append(f"Invoice ID: {self.invoice_var.get().split('|')[0].strip()}")
         lines.append("")
 

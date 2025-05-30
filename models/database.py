@@ -90,9 +90,12 @@ def get_invoice_items(invoice_db_id):
         ''', (invoice_db_id,))
         return cursor.fetchall()
 
-def update_invoice(invoice_db_id, user_info, items):
+def update_invoice(invoice_db_id, user_info, items, deleted_ids=None):
     with get_connection() as conn:
         cursor = conn.cursor()
+        if deleted_ids:
+            for item_id in deleted_ids:
+                cursor.execute("DELETE FROM invoice_items WHERE id = ?", (item_id,))
         cursor.execute("UPDATE invoices SET user_info = ? WHERE id = ?", (user_info, invoice_db_id))
 
         for item in items:

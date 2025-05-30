@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox , simpledialog
 from models import database
 
 class ManageVendorsWindow(tk.Toplevel):
@@ -82,31 +82,44 @@ class ManageVendorsWindow(tk.Toplevel):
             messagebox.showwarning("No Selection", "Select a vendor to delete.")
             return
 
-        # Check if vendor has linked items
+        vendor_name = self.vendor_name_var.get()
+
+        # Count linked items
         conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM items WHERE vendor_id = ?", (self.selected_vendor_id,))
-        count = cursor.fetchone()[0]
+        item_count = cursor.fetchone()[0]
         conn.close()
 
-        if count > 0:
-            messagebox.showerror("Blocked", "Cannot delete vendor with linked items.")
-            return
-
-        confirm = messagebox.askyesno("Confirm", "Delete this vendor?")
-        if not confirm:
-            return
+        if item_count > 0:
+            confirm_text = tk.simpledialog.askstring(
+                "Confirm Deletion",
+                f"This will also delete {item_count} item(s) belonging to vendor '{vendor_name}'.\n\n"
+                f"To confirm, type the vendor's name exactly:"
+            )
+            if confirm_text != vendor_name:
+                messagebox.showinfo("Cancelled", "Vendor deletion cancelled.")
+                return
+        else:
+            confirm = messagebox.askyesno("Confirm", f"Delete vendor '{vendor_name}'?")
+            if not confirm:
+                return
 
         try:
             conn = database.get_connection()
             cursor = conn.cursor()
+            # Delete items first
+            cursor.execute("DELETE FROM items WHERE vendor_id = ?", (self.selected_vendor_id,))
+            # Then delete vendor
             cursor.execute("DELETE FROM vendors WHERE id = ?", (self.selected_vendor_id,))
             conn.commit()
             conn.close()
             self.refresh_vendor_list()
+            messagebox.showinfo("Deleted", f"Vendor '{vendor_name}' and all related items were deleted.")
         except Exception as e:
             messagebox.showerror("Error", f"Could not delete vendor: {e}")
 
+    
     def destroy(self):
         if self.on_close:
             callback = self.on_close
