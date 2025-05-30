@@ -12,12 +12,12 @@ def on_close_subwindow(window):
 
 def open_new_invoice():
     root.withdraw()
-    win = NewInvoiceWindow(root, on_close=lambda: on_close_subwindow(win))
+    win = NewInvoiceWindow(root)
     win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
 
 def open_edit_invoice():
     root.withdraw()
-    win = EditInvoiceWindow(root, on_close=lambda: on_close_subwindow(win))
+    win = EditInvoiceWindow(root)
     win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
 
 def open_manage_vendors():

@@ -6,11 +6,10 @@ import uuid
 from models import database
 
 class NewInvoiceWindow(tk.Toplevel):
-    def __init__(self, master, on_close=None):
+    def __init__(self, master):
         super().__init__(master)
         self.title("Create New Invoice")
         self.geometry("1200x600")
-        self.on_close = on_close
 
         self.vendor_options = database.get_all_vendors()
         self.items_data = []
@@ -150,10 +149,6 @@ class NewInvoiceWindow(tk.Toplevel):
                 invoice_items
             )
             messagebox.showinfo("Success", "Invoice saved successfully.")
-            if self.on_close:
-                self.on_close()
-            else:
-                self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save invoice: {e}")
 

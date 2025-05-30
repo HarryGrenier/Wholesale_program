@@ -6,12 +6,10 @@ from models.generate_pdf import generate_pdf_invoice
 import tkinter.filedialog as filedialog
 
 class EditInvoiceWindow(tk.Toplevel):
-    def __init__(self, master, on_close=None):
+    def __init__(self, master):
         super().__init__(master)
         self.title("Edit Invoice")
         self.geometry("1200x700")
-        self.on_close = on_close
-
         self.invoices = database.get_all_invoices()
         self.selected_invoice_id = None
         self.invoice_items = []
@@ -245,10 +243,6 @@ class EditInvoiceWindow(tk.Toplevel):
         try:
             database.update_invoice(self.selected_invoice_id, user_info="", items=updated_items, deleted_ids=self.deleted_ids)
             messagebox.showinfo("Success", "Invoice updated successfully.")
-            if self.on_close:
-                self.on_close()
-            else:
-                self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
     
