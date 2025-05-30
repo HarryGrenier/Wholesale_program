@@ -77,17 +77,19 @@ def get_all_invoices():
         cursor.execute("SELECT id, invoice_id, date, user_info FROM invoices ORDER BY date DESC")
         return cursor.fetchall()
 
-def get_invoice_items(invoice_db_id):
+def get_invoice_items(invoice_id):
     with get_connection() as conn:
+        conn.row_factory = sqlite3.Row  # ✅ THIS IS NEEDED
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT ii.id, v.name AS vendor_name, i.name AS item_name,
-                   ii.quantity, ii.unit_price, ii.optional_info
+        cursor.execute("""
+            SELECT items.id as item_id, vendors.name as vendor_name,
+                   items.name as item_name, ii.optional_info,
+                   ii.quantity, ii.unit_price
             FROM invoice_items ii
-            JOIN vendors v ON ii.vendor_id = v.id
-            JOIN items i ON ii.item_id = i.id
+            JOIN items ON ii.item_id = items.id
+            JOIN vendors ON items.vendor_id = vendors.id
             WHERE ii.invoice_id = ?
-        ''', (invoice_db_id,))
+        """, (invoice_id,))
         return cursor.fetchall()
 
 def update_invoice(invoice_db_id, user_info, items, deleted_ids=None):
@@ -120,3 +122,12 @@ def update_invoice(invoice_db_id, user_info, items, deleted_ids=None):
                     )
                 )
         conn.commit()
+
+
+def get_invoice_details(invoice_id):
+    with get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, date FROM invoices WHERE id = ?", (invoice_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None

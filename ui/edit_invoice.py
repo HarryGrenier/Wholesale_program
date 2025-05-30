@@ -2,6 +2,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from models import database
+from models.generate_pdf import generate_pdf_invoice
+import tkinter.filedialog as filedialog
 
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, on_close=None):
@@ -110,6 +112,8 @@ class EditInvoiceWindow(tk.Toplevel):
         ttk.Button(frame, text="Delete Selected Row", command=self.delete_selected_row).pack(side="left", padx=5)
         ttk.Button(frame, text="Export Invoice", command=self.export_invoice).pack(side="left", padx=5)
         ttk.Button(frame, text="Save Changes", command=self.save_changes).pack(side="right")
+        ttk.Button(frame, text="Export to PDF", command=self.export_to_pdf).pack(side="right", padx=5)
+
 
     def update_item_dropdown(self, event=None):
         selected_vendor = self.new_vendor_var.get()
@@ -247,6 +251,42 @@ class EditInvoiceWindow(tk.Toplevel):
                 self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
+    
+    def export_to_pdf(self):
+        if not self.selected_invoice_id:
+            messagebox.showerror("No Invoice", "Please select an invoice to export.")
+            return
+
+        # Ask where to save the file
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Files", "*.pdf")],
+            title="Save PDF Invoice"
+        )
+        if not filepath:
+            return
+
+        # Fetch invoice date and items from database
+        from models.database import get_invoice_details, get_invoice_items
+
+        order_date = get_invoice_details(self.selected_invoice_id)["date"]
+        raw_items = get_invoice_items(self.selected_invoice_id)
+
+        # Ensure each row has item_id, item_name, vendor_name, quantity, unit_price, optional_info
+        invoice_items = []
+        for row in raw_items:
+            invoice_items.append({
+                "vendor_name": row["vendor_name"],
+                "item_id": row["item_id"],
+                "item_name": row["item_name"],
+                "optional_info": row["optional_info"],
+                "quantity": row["quantity"],
+                "unit_price": row["unit_price"]
+            })
+
+        # Call PDF generator
+        generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath)
+        messagebox.showinfo("Success", f"PDF saved to:\n{filepath}")
 
     def export_invoice(self):
         if not self.selected_invoice_id:
