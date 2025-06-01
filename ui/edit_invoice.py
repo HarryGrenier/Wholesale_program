@@ -8,9 +8,20 @@ import tkinter.filedialog as filedialog
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, invoice_db_id=None):
         super().__init__(master)
-        self.title("Edit Invoice")
+        self.title("📋 Edit Invoice - Wholesale Manager")
         self.state("zoomed")
-        
+
+        default_font = ('Segoe UI', 10)
+        self.option_add("*Font", default_font)
+
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=28, font=default_font)
+        style.configure("Treeview.Heading", font=('Segoe UI', 10, 'bold'))
+        style.map("Treeview",
+            background=[("selected", "#cce5ff")],
+            foreground=[("selected", "black")]
+        )
+
         self.selected_invoice_id = invoice_db_id
         self.invoice_items = []
         self.tree_full_data = {}
@@ -22,24 +33,24 @@ class EditInvoiceWindow(tk.Toplevel):
             self.invoices = []
 
         self.setup_invoice_selector()
+        ttk.Separator(self, orient="horizontal").pack(fill='x', padx=10, pady=5)
         self.setup_treeview()
+        ttk.Separator(self, orient="horizontal").pack(fill='x', padx=10, pady=5)
         self.setup_new_row_entry()
+        ttk.Separator(self, orient="horizontal").pack(fill='x', padx=10, pady=5)
         self.setup_buttons()
 
         if invoice_db_id:
             self.load_invoice_items_from_id(invoice_db_id)
 
     def setup_invoice_selector(self):
-        
-        
-    
-        frame = ttk.Frame(self)
+        frame = ttk.LabelFrame(self, text="📄 Invoice Selection")
         frame.pack(fill='x', padx=10, pady=5)
-        
+
         if self.selected_invoice_id:
             Id_string = f"Invoice ID: {self.selected_invoice_id}"
             ttk.Label(frame, text=Id_string).pack(side="left")
-            return  # Skip dropdown when editing a specific invoice directly
+            return
 
         ttk.Label(frame, text="Select Invoice:").pack(side="left")
         self.invoice_var = tk.StringVar()
@@ -49,12 +60,18 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_menu.bind("<<ComboboxSelected>>", self.load_invoice_items)
 
     def setup_treeview(self):
+        tree_frame = ttk.LabelFrame(self, text="📦 Line Items")
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
+
         columns = ("vendor", "item", "quantity", "price", "optional_info")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=18)
         for col in columns:
             self.tree.heading(col, text=col.replace("_", " ").title())
             self.tree.column(col, anchor="center")
-        self.tree.pack(fill='both', expand=True, padx=10, pady=10)
+        self.tree.pack(fill='both', expand=True)
+
+        self.tree.tag_configure('evenrow', background='#f9f9f9')
+        self.tree.tag_configure('oddrow', background='#ffffff')
 
         def on_double_click(event):
             region = self.tree.identify('region', event.x, event.y)
@@ -90,7 +107,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.tree.bind("<Double-1>", on_double_click)
 
     def setup_new_row_entry(self):
-        frame = ttk.LabelFrame(self, text="Add New Item")
+        frame = ttk.LabelFrame(self, text="➕ Add New Item")
         frame.pack(fill='x', padx=10, pady=5)
 
         self.new_vendor_var = tk.StringVar()
@@ -121,10 +138,9 @@ class EditInvoiceWindow(tk.Toplevel):
         ttk.Button(frame, text="Add Row", command=self.add_new_row_to_table).grid(row=0, column=10, padx=10)
 
     def setup_buttons(self):
-        frame = ttk.Frame(self)
+        frame = ttk.LabelFrame(self, text="🛠 Actions")
         frame.pack(fill='x', padx=10, pady=10)
         ttk.Button(frame, text="Delete Selected Row", command=self.delete_selected_row).pack(side="left", padx=5)
-        ttk.Button(frame, text="Export Invoice", command=self.export_invoice).pack(side="left", padx=5)
         ttk.Button(frame, text="Save Changes", command=self.save_changes).pack(side="right")
         ttk.Button(frame, text="Export to PDF", command=self.export_to_pdf).pack(side="right", padx=5)
 
