@@ -3,8 +3,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser, messagebox
 import json
 import os
+from models.database_creation import create_tables
 
-import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "Data")
@@ -102,6 +102,9 @@ class SettingsWindow(tk.Toplevel):
         # Save and Reset Buttons
         ttk.Button(frame, text="Save Settings", command=self.save).grid(row=11, column=0, columnspan=3, pady=15)
         ttk.Button(frame, text="Reset to Defaults", command=self.reset_defaults).grid(row=12, column=0, columnspan=3)
+        ttk.Button(frame, text="Generate Database Schema", command=self.run_schema_creation).grid(row=15, column=0, columnspan=3, pady=(0, 10))
+        
+
 
     def pick_color(self, entry_widget):
         color = colorchooser.askcolor()[1]
@@ -138,3 +141,20 @@ class SettingsWindow(tk.Toplevel):
         save_settings(self.settings)
         self.destroy()
         SettingsWindow(self.master)
+
+    def run_schema_creation(self):
+        db_path = "Data/invoice.db"
+
+        if os.path.exists(db_path):
+            confirm = messagebox.askyesno(
+                "Database Exists",
+                "The database already exists.\nAre you sure you want to run the schema creation?\n(This will not delete any data but may modify the structure.)"
+            )
+            if not confirm:
+                return
+
+        try:
+            create_tables()
+            messagebox.showinfo("Success", "Database schema created successfully.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to create database schema:\n{e}")
