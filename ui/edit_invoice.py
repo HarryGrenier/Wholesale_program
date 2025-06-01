@@ -70,8 +70,9 @@ class EditInvoiceWindow(tk.Toplevel):
             self.tree.column(col, anchor="center")
         self.tree.pack(fill='both', expand=True)
 
-        self.tree.tag_configure('evenrow', background='#f9f9f9')
-        self.tree.tag_configure('oddrow', background='#ffffff')
+        self.tree.tag_configure('evenrow', background='#eaf3fc')  # Very light blue
+        self.tree.tag_configure('oddrow', background='#ffffff')   # White
+
 
         def on_double_click(event):
             region = self.tree.identify('region', event.x, event.y)
@@ -167,7 +168,10 @@ class EditInvoiceWindow(tk.Toplevel):
         vendor_id = next((v[0] for v in self.vendor_list if v[1] == vendor_name), None)
         item_id = next((i[0] for i in self.new_item_menu.filtered_items if i[1] == item_name), None)
 
-        row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price, info))
+        index = len(self.tree.get_children())
+        tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+
+        row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price, info), tags=(tag,))
         self.tree_full_data[row_id] = {
             "vendor_id": vendor_id,
             "item_id": item_id,
@@ -182,6 +186,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.new_quantity_var.set(0)
         self.new_price_var.set(0.0)
         self.new_info_var.set("")
+
     
     def load_invoice_items_from_id(self, invoice_id):
         self.tree.delete(*self.tree.get_children())
@@ -189,7 +194,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_items = database.get_invoice_items(invoice_id)
         self.selected_invoice_id = invoice_id
 
-        for item in self.invoice_items:
+        for index, item in enumerate(self.invoice_items):
             item_id = item[0]
             vendor_name = item[1]
             item_name = item[2]
@@ -197,14 +202,14 @@ class EditInvoiceWindow(tk.Toplevel):
             unit_price = item[4]
             optional_info = item[5]
 
-            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info))
+            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info), tags=(tag,))
             self.tree_full_data[row_id] = {
                 "existing_id": item_id,
                 "quantity": quantity,
                 "unit_price": unit_price,
                 "optional_info": optional_info
             }
-
     def load_invoice_items(self, event=None):
         selection = self.invoice_menu.get()
         if not selection:
@@ -217,7 +222,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.tree_full_data.clear()
         self.invoice_items = database.get_invoice_items(self.selected_invoice_id)
 
-        for item in self.invoice_items:
+        for index, item in enumerate(self.invoice_items):
             item_id = item[0]
             vendor_name = item[1]
             item_name = item[2]
@@ -225,7 +230,8 @@ class EditInvoiceWindow(tk.Toplevel):
             unit_price = item[4]
             optional_info = item[5]
 
-            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info))
+            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info), tags=(tag,))
             self.tree_full_data[row_id] = {
                 "existing_id": item_id,
                 "quantity": quantity,
@@ -237,6 +243,7 @@ class EditInvoiceWindow(tk.Toplevel):
         if first:
             self.tree.selection_set(first[0])
             self.tree.focus(first[0])
+
 
     def delete_selected_row(self):
         selected = self.tree.selection()
