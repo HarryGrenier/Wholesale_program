@@ -54,7 +54,7 @@ def get_all_items():
 def get_all_invoices():
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, date, user_info FROM invoices ORDER BY date DESC")
+        cursor.execute("SELECT id, date FROM invoices ORDER BY id DESC")
         return cursor.fetchall()
 
 def get_invoice_items(invoice_id):
@@ -76,13 +76,12 @@ def get_invoice_items(invoice_id):
         """, (invoice_id,))
         return cursor.fetchall()
 
-def update_invoice(invoice_db_id, user_info, items, deleted_ids=None):
+def update_invoice(invoice_db_id, items, deleted_ids=None):
     with get_connection() as conn:
         cursor = conn.cursor()
         if deleted_ids:
             for item_id in deleted_ids:
                 cursor.execute("DELETE FROM invoice_items WHERE id = ?", (item_id,))
-        cursor.execute("UPDATE invoices SET user_info = ? WHERE id = ?", (user_info, invoice_db_id))
 
         for item in items:
             if item.get("existing_id"):
@@ -130,6 +129,6 @@ def create_blank_invoice():
     with get_connection() as conn:
         cursor = conn.cursor()
         date = datetime.now().strftime("%Y-%m-%d")
-        cursor.execute("INSERT INTO invoices (date, user_info) VALUES (?, ?)", (date, ""))
+        cursor.execute("INSERT INTO invoices (date) VALUES (?)", (date,))
         conn.commit()
         return cursor.lastrowid

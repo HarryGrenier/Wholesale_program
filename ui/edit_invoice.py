@@ -9,7 +9,7 @@ class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, invoice_db_id=None):
         super().__init__(master)
         self.title("Edit Invoice")
-        self.geometry("1200x700")
+        self.state("zoomed")
         
         self.selected_invoice_id = invoice_db_id
         self.invoice_items = []
@@ -31,15 +31,19 @@ class EditInvoiceWindow(tk.Toplevel):
 
     def setup_invoice_selector(self):
         
-        if self.selected_invoice_id:
-            return  # Skip dropdown when editing a specific invoice directly
+        
     
         frame = ttk.Frame(self)
         frame.pack(fill='x', padx=10, pady=5)
+        
+        if self.selected_invoice_id:
+            Id_string = f"Invoice ID: {self.selected_invoice_id}"
+            ttk.Label(frame, text=Id_string).pack(side="left")
+            return  # Skip dropdown when editing a specific invoice directly
 
         ttk.Label(frame, text="Select Invoice:").pack(side="left")
         self.invoice_var = tk.StringVar()
-        invoice_options = [f"{inv[1]} | {inv[2]}" for inv in self.invoices]
+        invoice_options = [f"{inv[1]} | Invoice ID: {inv[0]}" for inv in self.invoices]
         self.invoice_menu = ttk.Combobox(frame, textvariable=self.invoice_var, values=invoice_options, state="readonly", width=40)
         self.invoice_menu.pack(side="left", padx=10)
         self.invoice_menu.bind("<<ComboboxSelected>>", self.load_invoice_items)
@@ -148,14 +152,6 @@ class EditInvoiceWindow(tk.Toplevel):
         item_id = next((i[0] for i in self.new_item_menu.filtered_items if i[1] == item_name), None)
 
         row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price, info))
-        self.tree_full_data[row_id] = {
-            "vendor_id": vendor_id,
-            "item_id": item_id,
-            "quantity": qty,
-            "unit_price": price,
-            "optional_info": info,
-            "existing_id": None
-        }
         self.tree_full_data[row_id] = {
             "vendor_id": vendor_id,
             "item_id": item_id,
@@ -275,11 +271,14 @@ class EditInvoiceWindow(tk.Toplevel):
                 })
 
         try:
-            database.update_invoice(self.selected_invoice_id, user_info="", items=updated_items, deleted_ids=self.deleted_ids)
+            database.update_invoice(self.selected_invoice_id, items=updated_items, deleted_ids=self.deleted_ids)
             messagebox.showinfo("Success", "Invoice updated successfully.")
+            # ✅ Reload as a fresh EditInvoiceWindow
+            self.destroy()
+            EditInvoiceWindow(self.master, invoice_db_id=self.selected_invoice_id)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
-    
+
     def export_to_pdf(self):
         if not self.selected_invoice_id:
             messagebox.showerror("No Invoice", "Please select an invoice to export.")
