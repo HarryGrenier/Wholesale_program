@@ -27,9 +27,7 @@ def create_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            invoice_id TEXT UNIQUE,
-            date TEXT,
-            user_info TEXT
+            date TEXT
         )
     ''')
 
