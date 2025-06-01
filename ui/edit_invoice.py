@@ -267,9 +267,7 @@ class EditInvoiceWindow(tk.Toplevel):
         updated_items = []
 
         for row_id in self.tree.get_children():
-            values = self.tree.item(row_id)["values"]
             data = self.tree_full_data[row_id]
-
             if data.get("existing_id") is not None:
                 updated_items.append({
                     "existing_id": data["existing_id"],
@@ -288,13 +286,10 @@ class EditInvoiceWindow(tk.Toplevel):
 
         try:
             database.update_invoice(self.selected_invoice_id, items=updated_items, deleted_ids=self.deleted_ids)
+            self.load_invoice_items_from_id(self.selected_invoice_id)  # 🔁 Reload contents
             messagebox.showinfo("Success", "Invoice updated successfully.")
-            # ✅ Reload as a fresh EditInvoiceWindow
-            self.destroy()
-            EditInvoiceWindow(self.master, invoice_db_id=self.selected_invoice_id)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
-
     def export_to_pdf(self):
         if not self.selected_invoice_id:
             messagebox.showerror("No Invoice", "Please select an invoice to export.")
