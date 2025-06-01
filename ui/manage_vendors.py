@@ -23,7 +23,7 @@ class ManageVendorsWindow(tk.Toplevel):
 
         entry_frame = ttk.Frame(self)
         entry_frame.pack(pady=10)
-
+        ttk.Label(entry_frame, text="Vendor Name:").pack(side="left", padx=(0, 5))
         self.vendor_name_var = tk.StringVar()
         ttk.Entry(entry_frame, textvariable=self.vendor_name_var, width=30).pack(side="left", padx=5)
 

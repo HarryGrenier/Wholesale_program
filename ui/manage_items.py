@@ -34,15 +34,22 @@ class ManageItemsWindow(tk.Toplevel):
         entry_frame = ttk.Frame(self)
         entry_frame.pack(pady=10)
 
+        # Item Name
+        ttk.Label(entry_frame, text="Item Name:").pack(side="left", padx=(0, 2))
         self.item_name_var = tk.StringVar()
-        ttk.Entry(entry_frame, textvariable=self.item_name_var, width=30).pack(side="left", padx=5)
-        self.item_code_var = tk.StringVar()
-        ttk.Entry(entry_frame, textvariable=self.item_code_var, width=15).pack(side="left", padx=5)
+        ttk.Entry(entry_frame, textvariable=self.item_name_var, width=30).pack(side="left", padx=(0, 10))
 
+        # Item Code
+        ttk.Label(entry_frame, text="Item Code:").pack(side="left", padx=(0, 2))
+        self.item_code_var = tk.StringVar()
+        ttk.Entry(entry_frame, textvariable=self.item_code_var, width=15).pack(side="left", padx=(0, 10))
+
+        # Vendor
+        ttk.Label(entry_frame, text="Vendor:").pack(side="left", padx=(0, 2))
         self.vendor_select_var = tk.StringVar()
         self.vendor_select_menu = ttk.Combobox(entry_frame, textvariable=self.vendor_select_var, state="readonly", width=20)
         self.vendor_select_menu['values'] = [v[1] for v in self.vendor_list]
-        self.vendor_select_menu.pack(side="left", padx=5)
+        self.vendor_select_menu.pack(side="left", padx=(0, 10))
 
         button_frame = ttk.Frame(self)
         button_frame.pack()
@@ -76,19 +83,22 @@ class ManageItemsWindow(tk.Toplevel):
         self.vendor_select_var.set("")
 
     def on_select_item(self, event=None):
-        if len(item) > 3:
-            item = self.filtered_items[index]
-        if len(item) > 3:
-            self.item_code_var.set(item[3])
         selection = self.item_listbox.curselection()
         if not selection:
             return
+
         index = selection[0]
         item = self.filtered_items[index]
         self.selected_item_id = item[0]
         self.item_name_var.set(item[1])
         vendor_name = next((v[1] for v in self.vendor_list if v[0] == item[2]), "")
         self.vendor_select_var.set(vendor_name)
+
+        if len(item) > 3:
+            self.item_code_var.set(item[3])
+        else:
+            self.item_code_var.set("")  # Clear field if no code
+
 
     def add_item(self):
         name = self.item_name_var.get().strip()
