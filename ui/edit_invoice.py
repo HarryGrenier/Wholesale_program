@@ -4,12 +4,15 @@ from tkinter import ttk, messagebox
 from models import database
 from models.generate_pdf import generate_pdf_invoice
 import tkinter.filedialog as filedialog
+from ui.settings import load_settings
 
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, invoice_db_id=None):
         super().__init__(master)
         self.title("📋 Edit Invoice - Wholesale Manager")
         self.state("zoomed")
+
+        self.settings = load_settings()
 
         default_font = ('Segoe UI', 10)
         self.option_add("*Font", default_font)
@@ -21,6 +24,10 @@ class EditInvoiceWindow(tk.Toplevel):
             background=[("selected", "#cce5ff")],
             foreground=[("selected", "black")]
         )
+
+        # Set up alternating row styles from settings
+        self.even_color = self.settings["row_colors"].get("even", "#f4f4f4")
+        self.odd_color = self.settings["row_colors"].get("odd", "#ffffff")
 
         self.selected_invoice_id = invoice_db_id
         self.invoice_items = []
@@ -70,8 +77,8 @@ class EditInvoiceWindow(tk.Toplevel):
             self.tree.column(col, anchor="center")
         self.tree.pack(fill='both', expand=True)
 
-        self.tree.tag_configure('evenrow', background='#eaf3fc')  # Very light blue
-        self.tree.tag_configure('oddrow', background='#ffffff')   # White
+        self.tree.tag_configure('evenrow', background=self.even_color)
+        self.tree.tag_configure('oddrow', background=self.odd_color)
 
 
         def on_double_click(event):
@@ -302,11 +309,15 @@ class EditInvoiceWindow(tk.Toplevel):
             messagebox.showerror("No Invoice", "Please select an invoice to export.")
             return
 
-        # Ask where to save the file
+        settings = load_settings()
+        default_dir = settings.get("pdf_output_directory", "")
+
+        # Ask where to save the file (starting in default_dir)
         filepath = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF Files", "*.pdf")],
-            title="Save PDF Invoice"
+            title="Save PDF Invoice",
+            initialdir=default_dir
         )
         if not filepath:
             return
@@ -317,7 +328,6 @@ class EditInvoiceWindow(tk.Toplevel):
         order_date = get_invoice_details(self.selected_invoice_id)["date"]
         raw_items = get_invoice_items(self.selected_invoice_id)
 
-        # Ensure each row has item_id, item_name, vendor_name, quantity, unit_price, optional_info
         invoice_items = []
         for row in raw_items:
             invoice_items.append({
@@ -332,28 +342,3 @@ class EditInvoiceWindow(tk.Toplevel):
         # Call PDF generator
         generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath)
         messagebox.showinfo("Success", f"PDF saved to:\n{filepath}")
-
-    def export_invoice(self):
-        if not self.selected_invoice_id:
-            messagebox.showwarning("No Invoice", "Please select an invoice to export.")
-            return
-
-        items = self.tree.get_children()
-        if not items:
-            messagebox.showinfo("Empty", "There are no items to export.")
-            return
-
-        lines = []
-        lines.append(f"Invoice Export{'='*40}")
-        lines.append(f"Invoice ID: {self.selected_invoice_id}")
-        lines.append("")
-
-        for row_id in items:
-            values = self.tree.item(row_id)['values']
-            lines.append(f"{values[0]} - {values[1]} | Qty: {values[2]} | ${values[3]:.2f} | Info: {values[4]}")
-
-        file_name = f"invoice_{self.selected_invoice_id}.pdf"
-        with open(file_name, "w") as f:
-            f.write("\n".join(lines))
-
-        messagebox.showinfo("Export Complete", f"Invoice exported to {file_name}")
