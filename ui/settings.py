@@ -1,15 +1,31 @@
+
 import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser, messagebox
 import json
 import os
 
-SETTINGS_FILE = "../Data/settings.json"
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "Data")
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
+
 DEFAULT_SETTINGS = {
     "row_colors": {
         "even": "#f4f4f4",
         "odd": "#ffffff"
     },
-    "pdf_output_directory": ""
+    "pdf_output_directory": "",
+    "defaults": {
+        "quantity": 1,
+        "unit_price": 0.0
+    },
+    "window_mode": "zoomed",
+    "confirmations": {
+        "on_save": True,
+        "on_delete": True
+    },
+    "pdf_filename_format": "invoice_{id}_{date}"
 }
 
 def load_settings():
@@ -26,7 +42,7 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("⚙️ Settings")
-        self.geometry("400x250")
+        self.geometry("500x480")
         self.resizable(False, False)
 
         self.settings = load_settings()
@@ -55,11 +71,37 @@ class SettingsWindow(tk.Toplevel):
         self.output_dir_entry.grid(row=3, column=0, columnspan=2, pady=5)
         ttk.Button(frame, text="Browse", command=self.browse_output_dir).grid(row=3, column=2)
 
-        # Reset to Defaults Button
-        ttk.Button(frame, text="Reset to Defaults", command=self.reset_to_defaults).grid(row=5, column=0, columnspan=3, pady=5)
+        # Default Quantity and Price
+        ttk.Label(frame, text="Default Quantity:").grid(row=4, column=0, sticky="w", pady=(10, 0))
+        self.default_qty_entry = ttk.Entry(frame, width=10)
+        self.default_qty_entry.insert(0, str(self.settings["defaults"]["quantity"]))
+        self.default_qty_entry.grid(row=4, column=1, sticky="w")
 
-        # Save Button
-        ttk.Button(frame, text="Save Settings", command=self.save).grid(row=4, column=0, columnspan=3, pady=15)
+        ttk.Label(frame, text="Default Unit Price:").grid(row=5, column=0, sticky="w")
+        self.default_price_entry = ttk.Entry(frame, width=10)
+        self.default_price_entry.insert(0, str(self.settings["defaults"]["unit_price"]))
+        self.default_price_entry.grid(row=5, column=1, sticky="w")
+
+        # Window Mode
+        ttk.Label(frame, text="Window Mode:").grid(row=6, column=0, sticky="w", pady=(10, 0))
+        self.window_mode_var = tk.StringVar(value=self.settings.get("window_mode", "zoomed"))
+        ttk.Combobox(frame, textvariable=self.window_mode_var, values=["zoomed", "normal"], state="readonly", width=15).grid(row=6, column=1)
+
+        # Confirmations
+        self.confirm_save_var = tk.BooleanVar(value=self.settings["confirmations"].get("on_save", True))
+        self.confirm_delete_var = tk.BooleanVar(value=self.settings["confirmations"].get("on_delete", True))
+        ttk.Checkbutton(frame, text="Confirm on Save", variable=self.confirm_save_var).grid(row=7, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ttk.Checkbutton(frame, text="Confirm on Delete", variable=self.confirm_delete_var).grid(row=8, column=0, columnspan=2, sticky="w")
+
+        # PDF Filename Format
+        ttk.Label(frame, text="PDF Filename Format:").grid(row=10, column=0, sticky="w", pady=(10, 0))
+        self.filename_format_entry = ttk.Entry(frame, width=30)
+        self.filename_format_entry.insert(0, self.settings.get("pdf_filename_format", "invoice_{id}_{date}"))
+        self.filename_format_entry.grid(row=10, column=1, columnspan=2, sticky="w")
+
+        # Save and Reset Buttons
+        ttk.Button(frame, text="Save Settings", command=self.save).grid(row=11, column=0, columnspan=3, pady=15)
+        ttk.Button(frame, text="Reset to Defaults", command=self.reset_defaults).grid(row=12, column=0, columnspan=3)
 
     def pick_color(self, entry_widget):
         color = colorchooser.askcolor()[1]
@@ -72,24 +114,27 @@ class SettingsWindow(tk.Toplevel):
         if directory:
             self.output_dir_entry.delete(0, tk.END)
             self.output_dir_entry.insert(0, directory)
-    
-    def reset_to_defaults(self):
-        self.even_color_entry.delete(0, tk.END)
-        self.even_color_entry.insert(0, DEFAULT_SETTINGS["row_colors"]["even"])
-
-        self.odd_color_entry.delete(0, tk.END)
-        self.odd_color_entry.insert(0, DEFAULT_SETTINGS["row_colors"]["odd"])
-
-        self.output_dir_entry.delete(0, tk.END)
-        self.output_dir_entry.insert(0, DEFAULT_SETTINGS["pdf_output_directory"])
-
-        save_settings(DEFAULT_SETTINGS)
-        messagebox.showinfo("Settings", "Settings reset to defaults.")
 
     def save(self):
+        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(self.settings, f, indent=4)
         self.settings["row_colors"]["even"] = self.even_color_entry.get()
         self.settings["row_colors"]["odd"] = self.odd_color_entry.get()
         self.settings["pdf_output_directory"] = self.output_dir_entry.get()
+        self.settings["defaults"]["quantity"] = int(self.default_qty_entry.get())
+        self.settings["defaults"]["unit_price"] = float(self.default_price_entry.get())
+        self.settings["window_mode"] = self.window_mode_var.get()
+        self.settings["confirmations"]["on_save"] = self.confirm_save_var.get()
+        self.settings["confirmations"]["on_delete"] = self.confirm_delete_var.get()
+        self.settings["pdf_filename_format"] = self.filename_format_entry.get()
+
         save_settings(self.settings)
         messagebox.showinfo("Settings", "Settings saved successfully!")
+
+    def reset_defaults(self):
+        global DEFAULT_SETTINGS
+        self.settings = DEFAULT_SETTINGS.copy()
+        save_settings(self.settings)
         self.destroy()
+        SettingsWindow(self.master)

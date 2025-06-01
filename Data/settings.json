@@ -1,7 +1,18 @@
 {
-  "row_colors": {
-    "even": "#f4f4f4",
-    "odd": "#ffffff"
-  },
-  "pdf_output_directory": ""
+    "row_colors": {
+        "even": "#6342ff",
+        "odd": "#ff5f42"
+    },
+    "pdf_output_directory": "C:/Users/slowe/OneDrive/Desktop/Work/Wholesale_program/Output",
+    "defaults": {
+        "quantity": 100,
+        "unit_price": 80.0
+    },
+    "window_mode": "zoomed",
+    "confirmations": {
+        "on_save": true,
+        "on_delete": true
+    },
+    "auto_save_on_close": true,
+    "pdf_filename_format": "invoice_{id}_{date}"
 }
