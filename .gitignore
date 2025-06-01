@@ -1,1 +1,5 @@
 Data/invoice.db
+ui/__pycache__
+models/__pycache__
+Data/settings.json
+Data/settings.json
