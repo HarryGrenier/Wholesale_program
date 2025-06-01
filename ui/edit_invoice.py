@@ -6,24 +6,34 @@ from models.generate_pdf import generate_pdf_invoice
 import tkinter.filedialog as filedialog
 
 class EditInvoiceWindow(tk.Toplevel):
-    def __init__(self, master, on_close=None):
+    def __init__(self, master, invoice_db_id=None):
         super().__init__(master)
         self.title("Edit Invoice")
         self.geometry("1200x700")
-        self.on_close = on_close
-
-        self.invoices = database.get_all_invoices()
-        self.selected_invoice_id = None
+        
+        self.selected_invoice_id = invoice_db_id
         self.invoice_items = []
         self.tree_full_data = {}
         self.deleted_ids = set()
+
+        if invoice_db_id is None:
+            self.invoices = database.get_all_invoices()
+        else:
+            self.invoices = []
 
         self.setup_invoice_selector()
         self.setup_treeview()
         self.setup_new_row_entry()
         self.setup_buttons()
 
+        if invoice_db_id:
+            self.load_invoice_items_from_id(invoice_db_id)
+
     def setup_invoice_selector(self):
+        
+        if self.selected_invoice_id:
+            return  # Skip dropdown when editing a specific invoice directly
+    
         frame = ttk.Frame(self)
         frame.pack(fill='x', padx=10, pady=5)
 
@@ -160,6 +170,28 @@ class EditInvoiceWindow(tk.Toplevel):
         self.new_quantity_var.set(0)
         self.new_price_var.set(0.0)
         self.new_info_var.set("")
+    
+    def load_invoice_items_from_id(self, invoice_id):
+        self.tree.delete(*self.tree.get_children())
+        self.tree_full_data.clear()
+        self.invoice_items = database.get_invoice_items(invoice_id)
+        self.selected_invoice_id = invoice_id
+
+        for item in self.invoice_items:
+            item_id = item[0]
+            vendor_name = item[1]
+            item_name = item[2]
+            quantity = item[3]
+            unit_price = item[4]
+            optional_info = item[5]
+
+            row_id = self.tree.insert("", "end", values=(vendor_name, item_name, quantity, unit_price, optional_info))
+            self.tree_full_data[row_id] = {
+                "existing_id": item_id,
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "optional_info": optional_info
+            }
 
     def load_invoice_items(self, event=None):
         selection = self.invoice_menu.get()
@@ -245,10 +277,6 @@ class EditInvoiceWindow(tk.Toplevel):
         try:
             database.update_invoice(self.selected_invoice_id, user_info="", items=updated_items, deleted_ids=self.deleted_ids)
             messagebox.showinfo("Success", "Invoice updated successfully.")
-            if self.on_close:
-                self.on_close()
-            else:
-                self.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
     
@@ -300,14 +328,14 @@ class EditInvoiceWindow(tk.Toplevel):
 
         lines = []
         lines.append(f"Invoice Export{'='*40}")
-        lines.append(f"Invoice ID: {self.invoice_var.get().split('|')[0].strip()}")
+        lines.append(f"Invoice ID: {self.selected_invoice_id}")
         lines.append("")
 
         for row_id in items:
             values = self.tree.item(row_id)['values']
             lines.append(f"{values[0]} - {values[1]} | Qty: {values[2]} | ${values[3]:.2f} | Info: {values[4]}")
 
-        file_name = f"invoice_{self.selected_invoice_id}.txt"
+        file_name = f"invoice_{self.selected_invoice_id}.pdf"
         with open(file_name, "w") as f:
             f.write("\n".join(lines))
 

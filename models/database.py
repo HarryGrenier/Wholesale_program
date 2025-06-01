@@ -22,6 +22,9 @@ def get_all_vendors():
         cursor.execute("SELECT id, name FROM vendors ORDER BY name")
         return cursor.fetchall()
 
+
+
+
 # -------------------
 # Item Operations
 # -------------------
@@ -48,33 +51,10 @@ def get_all_items():
 # Invoice Operations
 # -------------------
 
-def create_invoice(invoice_id, date, user_info, items):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO invoices (invoice_id, date, user_info) VALUES (?, ?, ?)",
-            (invoice_id, date, user_info)
-        )
-        invoice_db_id = cursor.lastrowid
-        for item in items:
-            cursor.execute(
-                '''INSERT INTO invoice_items (invoice_id, vendor_id, item_id, quantity, unit_price, optional_info)
-                   VALUES (?, ?, ?, ?, ?, ?)''',
-                (
-                    invoice_db_id,
-                    item["vendor_id"],
-                    item["item_id"],
-                    item["quantity"],
-                    item["unit_price"],
-                    item.get("optional_info", "")
-                )
-            )
-        conn.commit()
-
 def get_all_invoices():
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, invoice_id, date, user_info FROM invoices ORDER BY date DESC")
+        cursor.execute("SELECT id, date, user_info FROM invoices ORDER BY date DESC")
         return cursor.fetchall()
 
 def get_invoice_items(invoice_id):
@@ -145,3 +125,11 @@ def add_item_code_column():
             conn.commit()
         except Exception:
             pass  # Already added
+
+def create_blank_invoice():
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        date = datetime.now().strftime("%Y-%m-%d")
+        cursor.execute("INSERT INTO invoices (date, user_info) VALUES (?, ?)", (date, ""))
+        conn.commit()
+        return cursor.lastrowid

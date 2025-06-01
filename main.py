@@ -1,23 +1,23 @@
 import tkinter as tk
 from tkinter import ttk
-from ui.new_invoice import NewInvoiceWindow
 from ui.edit_invoice import EditInvoiceWindow
 from ui.manage_vendors import ManageVendorsWindow
 from ui.manage_items import ManageItemsWindow
+from models.database import create_blank_invoice
 # Add imports for manage windows if needed later
 
 def on_close_subwindow(window):
     window.destroy()
     root.deiconify()
-
+    
 def open_new_invoice():
-    root.withdraw()
-    win = NewInvoiceWindow(root, on_close=lambda: on_close_subwindow(win))
-    win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
+    invoice_id = create_blank_invoice()
+    win = EditInvoiceWindow(root, invoice_db_id=invoice_id)
+    win.grab_set()
 
 def open_edit_invoice():
     root.withdraw()
-    win = EditInvoiceWindow(root, on_close=lambda: on_close_subwindow(win))
+    win = EditInvoiceWindow(root)
     win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
 
 def open_manage_vendors():
