@@ -44,7 +44,7 @@ def get_items_by_vendor(vendor_id):
 def get_all_items():
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, vendor_id FROM items")
+        cursor.execute("SELECT id, name, vendor_id, item_code FROM items")
         return cursor.fetchall()
 
 # -------------------
@@ -132,3 +132,10 @@ def create_blank_invoice():
         cursor.execute("INSERT INTO invoices (date) VALUES (?)", (date,))
         conn.commit()
         return cursor.lastrowid
+    
+def delete_invoice(invoice_id):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM invoice_items WHERE invoice_id = ?", (invoice_id,))
+        cursor.execute("DELETE FROM invoices WHERE id = ?", (invoice_id,))
+        conn.commit()

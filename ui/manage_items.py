@@ -81,6 +81,7 @@ class ManageItemsWindow(tk.Toplevel):
         self.selected_item_id = None
         self.item_name_var.set("")
         self.vendor_select_var.set("")
+        self.item_code_var.set("")
 
     def on_select_item(self, event=None):
         selection = self.item_listbox.curselection()
@@ -91,13 +92,9 @@ class ManageItemsWindow(tk.Toplevel):
         item = self.filtered_items[index]
         self.selected_item_id = item[0]
         self.item_name_var.set(item[1])
+        self.item_code_var.set(item[3])
         vendor_name = next((v[1] for v in self.vendor_list if v[0] == item[2]), "")
         self.vendor_select_var.set(vendor_name)
-
-        if len(item) > 3:
-            self.item_code_var.set(item[3])
-        else:
-            self.item_code_var.set("")  # Clear field if no code
 
 
     def add_item(self):
@@ -129,6 +126,10 @@ class ManageItemsWindow(tk.Toplevel):
             messagebox.showwarning("No Selection", "Select an item to rename.")
             return
         name = self.item_name_var.get().strip()
+        item_code = self.item_code_var.get().strip()
+        if not item_code:
+            messagebox.showwarning("Missing Code", "Enter an item code.")
+            return
         if not name:
             messagebox.showwarning("Missing Name", "Enter a new name.")
             return
@@ -136,6 +137,7 @@ class ManageItemsWindow(tk.Toplevel):
             conn = database.get_connection()
             cursor = conn.cursor()
             cursor.execute("UPDATE items SET name = ? WHERE id = ?", (name, self.selected_item_id))
+            cursor.execute("UPDATE items SET item_code = ? WHERE id = ?", (item_code, self.selected_item_id))
             conn.commit()
             conn.close()
             self.refresh_item_list()

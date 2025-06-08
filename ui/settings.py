@@ -11,6 +11,10 @@ DATA_DIR = os.path.join(BASE_DIR, "Data")
 SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 
 DEFAULT_SETTINGS = {
+    "invoice_retention": {
+        "years": 2,
+        "months": 0
+    },
     "row_colors": {
         "even": "#f4f4f4",
         "odd": "#ffffff"
@@ -27,6 +31,7 @@ DEFAULT_SETTINGS = {
     },
     "pdf_filename_format": "invoice_{id}_{date}"
 }
+
 
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):

@@ -5,6 +5,7 @@ from ui.manage_vendors import ManageVendorsWindow
 from ui.manage_items import ManageItemsWindow
 from models.database import create_blank_invoice
 from ui.settings import SettingsWindow
+from models.cleanup_old_invoices import delete_old_invoices
 # Add imports for manage windows if needed later
 
 def on_close_subwindow(window):
@@ -58,4 +59,5 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+    delete_old_invoices()
     main()

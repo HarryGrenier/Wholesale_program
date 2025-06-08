@@ -148,10 +148,12 @@ class EditInvoiceWindow(tk.Toplevel):
     def save_changes(self):
         if not self.selected_invoice_id:
             return
+
         if self.settings.get("confirmations", {}).get("on_save", True):
             confirm = messagebox.askyesno("Save Changes", "Are you sure you want to save all changes to this invoice?")
             if not confirm:
                 return
+
         updated_items = []
         for row_id in self.tree.get_children():
             data = self.tree_full_data[row_id]
@@ -170,12 +172,31 @@ class EditInvoiceWindow(tk.Toplevel):
                     "unit_price": data["unit_price"],
                     "optional_info": data["optional_info"]
                 })
+
         try:
+            if not updated_items and not self.tree.get_children():
+                confirm_delete = messagebox.askyesno("Delete Empty Invoice", "There are no items left. Delete the invoice?")
+                if confirm_delete:
+                    database.delete_invoice(self.selected_invoice_id)
+                    messagebox.showinfo("Invoice Deleted", "The empty invoice has been deleted.")
+
+                    # ⬇️ OPTIONAL: show or refresh main window
+                    if hasattr(self.master, 'deiconify'):  # for Tk root
+                        self.master.deiconify()
+                    elif hasattr(self.master, 'refresh'):  # for main window callback
+                        self.master.refresh()
+
+                    self.destroy()
+                    return
+                else:
+                    return
+
             database.update_invoice(self.selected_invoice_id, items=updated_items, deleted_ids=self.deleted_ids)
             self.load_invoice_items_from_id(self.selected_invoice_id)
             messagebox.showinfo("Success", "Invoice updated successfully.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
+
 
     def load_invoice_items_from_id(self, invoice_id):
         self.tree.delete(*self.tree.get_children())
