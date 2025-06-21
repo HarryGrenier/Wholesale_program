@@ -4,6 +4,9 @@ from models import database
 from models.generate_pdf import generate_pdf_invoice
 from ui.settings import load_settings
 from datetime import datetime
+import os
+import subprocess
+import platform
 
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, invoice_db_id=None):
@@ -61,14 +64,68 @@ class EditInvoiceWindow(tk.Toplevel):
     def setup_treeview(self):
         tree_frame = ttk.LabelFrame(self, text="📦 Line Items")
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
+
         columns = ("vendor", "item", "quantity", "price", "optional_info")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=18)
         for col in columns:
             self.tree.heading(col, text=col.replace("_", " ").title())
             self.tree.column(col, anchor="center")
+
         self.tree.pack(fill='both', expand=True)
+
+        # Row colors
         self.tree.tag_configure('evenrow', background=self.even_color)
         self.tree.tag_configure('oddrow', background=self.odd_color)
+
+    # In-place editing on double-click
+        def on_double_click(event):
+            region = self.tree.identify('region', event.x, event.y)
+            if region != 'cell':
+                return
+
+            row_id = self.tree.identify_row(event.y)
+            col_id = self.tree.identify_column(event.x)
+            col = int(col_id.replace('#', '')) - 1
+
+            if col not in [2, 3, 4]:  # Only allow editing Quantity, Price, Info
+                return
+
+            x, y, width, height = self.tree.bbox(row_id, col_id)
+            current_val = self.tree.item(row_id)['values'][col]
+
+            entry = tk.Entry(self.tree)
+            entry.place(x=x, y=y, width=width, height=height)
+            entry.insert(0, current_val)
+            entry.focus()
+
+            def save_edit(event):
+                new_val = entry.get()
+                values = list(self.tree.item(row_id)['values'])
+
+                try:
+                    # Validate input for quantity and price
+                    if col == 2:
+                        new_val_cast = int(new_val)
+                        self.tree_full_data[row_id]['quantity'] = new_val_cast
+                    elif col == 3:
+                        new_val_cast = float(new_val)
+                        self.tree_full_data[row_id]['unit_price'] = new_val_cast
+                    else:
+                        new_val_cast = new_val
+                        self.tree_full_data[row_id]['optional_info'] = new_val_cast
+
+                    values[col] = new_val_cast
+                    self.tree.item(row_id, values=values)
+
+                except ValueError:
+                    messagebox.showerror("Invalid Input", f"Please enter a valid number for {columns[col]}.")
+
+                entry.destroy()
+
+            entry.bind("<Return>", save_edit)
+            entry.bind("<FocusOut>", lambda e: entry.destroy())
+
+        self.tree.bind("<Double-1>", on_double_click)
 
     def setup_new_row_entry(self):
         frame = ttk.LabelFrame(self, text="➕ Add New Item")
@@ -144,6 +201,7 @@ class EditInvoiceWindow(tk.Toplevel):
                 del self.tree_full_data[row_id]
             self.tree.delete(row_id)
 
+        self.reapply_row_tags()
     
     def save_changes(self):
         if not self.selected_invoice_id:
@@ -220,6 +278,12 @@ class EditInvoiceWindow(tk.Toplevel):
         invoice_index = self.invoice_menu.current()
         self.selected_invoice_id = self.invoices[invoice_index][0]
         self.load_invoice_items_from_id(self.selected_invoice_id)
+        
+    def reapply_row_tags(self):
+        children = self.tree.get_children()
+        for i, row_id in enumerate(children):
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            self.tree.item(row_id, tags=(tag,))
 
     def export_to_pdf(self):
         if not self.selected_invoice_id:
@@ -250,3 +314,14 @@ class EditInvoiceWindow(tk.Toplevel):
         } for row in raw_items]
         generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath)
         messagebox.showinfo("Success", f"PDF saved to:{filepath}")
+        try:
+            if platform.system() == 'Darwin':  # macOS
+                subprocess.call(('open', filepath))
+            elif platform.system() == 'Windows':  # Windows
+                os.startfile(filepath)
+            elif platform.system() == 'Linux':  # Linux
+                subprocess.call(('xdg-open', filepath))
+            else:
+                messagebox.showwarning("Unsupported OS", f"Cannot open PDF on {platform.system()}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open PDF: {e}")

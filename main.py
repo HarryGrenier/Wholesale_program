@@ -6,7 +6,13 @@ from ui.manage_items import ManageItemsWindow
 from models.database import create_blank_invoice
 from ui.settings import SettingsWindow
 from models.cleanup_old_invoices import delete_old_invoices
-# Add imports for manage windows if needed later
+from ui.saved_invoices_window import SavedInvoicesWindow
+
+def open_saved_invoices_window():
+    root.withdraw()
+    win = SavedInvoicesWindow(root)
+    win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
+    win.grab_set()  # Make sure the main window is not accessible while this is open
 
 def on_close_subwindow(window):
     window.destroy()
@@ -53,6 +59,7 @@ def main():
     ttk.Button(root, text="Edit Existing Invoice", width=25, command=open_edit_invoice).pack(pady=10)
     ttk.Button(root, text="Manage Vendors", width=25, command=open_manage_vendors).pack(pady=10)
     ttk.Button(root, text="Manage Items", width=25, command=open_manage_items).pack(pady=10)
+    ttk.Button(root, text="View Saved Invoices", width=25, command=open_saved_invoices_window).pack(pady=10)
     ttk.Button(root, text="Settings", width=25, command=open_settings).pack(pady=10)
 
 

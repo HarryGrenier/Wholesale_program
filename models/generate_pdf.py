@@ -127,14 +127,18 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
                 c.showPage()
                 y = height - 1 * inch
                 y = draw_table_header(y)
-        # Underline to separate vendors
-        c.line(0.5 * inch, y + 0.15 * inch, 7.5 * inch, y + 0.15 * inch)
         # Subtotal row
         y = draw_row(y, ["", "", "", "Subtotal:", subtotal_qty, "", f"{subtotal_cost:.2f}"], font="Helvetica-Bold")
+        # Underline to separate vendors
+        c.line(0.5 * inch, y + 0.15 * inch, 7.5 * inch, y + 0.15 * inch)
+        y -= 0.2 * inch
         grand_total_qty += subtotal_qty
         grand_total_cost += subtotal_cost
+        
     # Grand total
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(0.5 * inch, y, f"GRAND TOTAL: Qty = {grand_total_qty}, Cost = ${grand_total_cost:.2f}")
+    c.drawString(0.5 * inch, y, f"GRAND TOTAL: ")
+    c.line(0.5 * inch, y - 0.05 * inch, 7.5 * inch, y - 0.05 * inch)
+    c.drawString(5.5 * inch, y, f"Quantity: {grand_total_qty}  Total: ${grand_total_cost:.2f}")
     c.save()
     return os.path.abspath(filename)
