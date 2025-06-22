@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3  
 
 def create_tables():
     conn = sqlite3.connect("Data/invoice.db")
@@ -17,10 +17,8 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        vendor_id INTEGER NOT NULL,
-        item_code TEXT UNIQUE,
-        FOREIGN KEY (vendor_id) REFERENCES vendors(id)
-        )
+        item_code TEXT UNIQUE
+        );
     ''')
 
     # Create Invoices Table

@@ -66,5 +66,8 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    delete_old_invoices()
+    try:
+        delete_old_invoices()
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
     main()

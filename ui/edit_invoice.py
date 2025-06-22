@@ -5,8 +5,8 @@ from models.generate_pdf import generate_pdf_invoice
 from ui.settings import load_settings
 from datetime import datetime
 import os
-import subprocess
 import platform
+import subprocess
 
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, invoice_db_id=None):
@@ -72,24 +72,16 @@ class EditInvoiceWindow(tk.Toplevel):
             self.tree.column(col, anchor="center")
 
         self.tree.pack(fill='both', expand=True)
-
-        # Row colors
         self.tree.tag_configure('evenrow', background=self.even_color)
         self.tree.tag_configure('oddrow', background=self.odd_color)
 
-    # In-place editing on double-click
         def on_double_click(event):
             region = self.tree.identify('region', event.x, event.y)
-            if region != 'cell':
-                return
-
+            if region != 'cell': return
             row_id = self.tree.identify_row(event.y)
             col_id = self.tree.identify_column(event.x)
             col = int(col_id.replace('#', '')) - 1
-
-            if col not in [2, 3, 4]:  # Only allow editing Quantity, Price, Info
-                return
-
+            if col not in [2, 3, 4]: return
             x, y, width, height = self.tree.bbox(row_id, col_id)
             current_val = self.tree.item(row_id)['values'][col]
 
@@ -101,9 +93,7 @@ class EditInvoiceWindow(tk.Toplevel):
             def save_edit(event):
                 new_val = entry.get()
                 values = list(self.tree.item(row_id)['values'])
-
                 try:
-                    # Validate input for quantity and price
                     if col == 2:
                         new_val_cast = int(new_val)
                         self.tree_full_data[row_id]['quantity'] = new_val_cast
@@ -113,13 +103,10 @@ class EditInvoiceWindow(tk.Toplevel):
                     else:
                         new_val_cast = new_val
                         self.tree_full_data[row_id]['optional_info'] = new_val_cast
-
                     values[col] = new_val_cast
                     self.tree.item(row_id, values=values)
-
                 except ValueError:
-                    messagebox.showerror("Invalid Input", f"Please enter a valid number for {columns[col]}.")
-
+                    messagebox.showerror("Invalid Input", f"Invalid value for {columns[col]}.")
                 entry.destroy()
 
             entry.bind("<Return>", save_edit)
@@ -135,21 +122,21 @@ class EditInvoiceWindow(tk.Toplevel):
         self.new_quantity_var = tk.IntVar(value=self.settings["defaults"].get("quantity", 1))
         self.new_price_var = tk.DoubleVar(value=self.settings["defaults"].get("unit_price", 0.0))
         self.new_info_var = tk.StringVar()
+
         self.vendor_list = database.get_all_vendors()
-        ttk.Label(frame, text="Vendor:").grid(row=0, column=0)
-        self.new_vendor_menu = ttk.Combobox(frame, textvariable=self.new_vendor_var, values=[v[1] for v in self.vendor_list], state="readonly", width=20)
-        self.new_vendor_menu.grid(row=0, column=1, padx=5)
-        self.new_vendor_menu.bind("<<ComboboxSelected>>", self.update_item_dropdown)
-        ttk.Label(frame, text="Item:").grid(row=0, column=2)
-        self.new_item_menu = ttk.Combobox(frame, textvariable=self.new_item_var, state="readonly", width=20)
-        self.new_item_menu.grid(row=0, column=3, padx=5)
-        ttk.Label(frame, text="Qty:").grid(row=0, column=4)
-        ttk.Entry(frame, textvariable=self.new_quantity_var, width=5).grid(row=0, column=5)
-        ttk.Label(frame, text="Unit $:").grid(row=0, column=6)
-        ttk.Entry(frame, textvariable=self.new_price_var, width=7).grid(row=0, column=7)
-        ttk.Label(frame, text="Info:").grid(row=0, column=8)
-        ttk.Entry(frame, textvariable=self.new_info_var, width=30).grid(row=0, column=9)
-        ttk.Button(frame, text="Add Row", command=self.add_new_row_to_table).grid(row=0, column=10, padx=10)
+        self.item_list = [i[1] for i in database.get_all_items()]
+
+        ttk.Label(frame, text="Vendor:").grid(row=0, column=0, padx=5, sticky="w")
+        ttk.Combobox(frame, textvariable=self.new_vendor_var, values=[v[1] for v in self.vendor_list], state="readonly", width=20).grid(row=2, column=0, padx=5)
+        ttk.Label(frame, text="Item:").grid(row=0, column=1, padx=5, sticky="w")
+        ttk.Combobox(frame, textvariable=self.new_item_var, values=self.item_list, state="readonly", width=25).grid(row=2, column=1, padx=5)
+        ttk.Label(frame, text="Quantity:").grid(row=0, column=2, padx=5, sticky="w")
+        ttk.Entry(frame, textvariable=self.new_quantity_var, width=7).grid(row=2, column=2)
+        ttk.Label(frame, text="Unit Price:").grid(row=0, column=3, padx=5, sticky="w")
+        ttk.Entry(frame, textvariable=self.new_price_var, width=7).grid(row=2, column=3)
+        ttk.Label(frame, text="Optional Info:").grid(row=0, column=4, padx=5, sticky="w")
+        ttk.Entry(frame, textvariable=self.new_info_var, width=25).grid(row=2, column=4)
+        ttk.Button(frame, text="Add Row", command=self.add_new_row_to_table).grid(row=2, column=5, padx=10)
 
     def setup_buttons(self):
         frame = ttk.LabelFrame(self, text="🛠 Actions")
@@ -159,31 +146,27 @@ class EditInvoiceWindow(tk.Toplevel):
         ttk.Button(frame, text="Export to PDF", command=self.export_to_pdf).pack(side="right", padx=5)
 
     def add_new_row_to_table(self):
-        vendor_name = self.new_vendor_var.get()
         item_name = self.new_item_var.get()
+        vendor_name = self.new_vendor_var.get()
         qty = self.new_quantity_var.get()
         price = self.new_price_var.get()
         info = self.new_info_var.get()
-        if not vendor_name or not item_name:
-            messagebox.showwarning("Missing Info", "Please select both vendor and item.")
+        if not item_name or not vendor_name:
+            messagebox.showwarning("Missing Info", "Please select both item and vendor.")
             return
+        item_id = database.get_item_id_by_name(item_name)
         vendor_id = next((v[0] for v in self.vendor_list if v[1] == vendor_name), None)
-        item_id = next((i[0] for i in self.new_item_menu.filtered_items if i[1] == item_name), None)
         index = len(self.tree.get_children())
         tag = 'evenrow' if index % 2 == 0 else 'oddrow'
         row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price, info), tags=(tag,))
         self.tree_full_data[row_id] = {
-            "vendor_id": vendor_id, "item_id": item_id, "quantity": qty,
-            "unit_price": price, "optional_info": info, "existing_id": None
+            "vendor_id": vendor_id,
+            "item_id": item_id,
+            "quantity": qty,
+            "unit_price": price,
+            "optional_info": info,
+            "existing_id": None
         }
-
-    def update_item_dropdown(self, event=None):
-        selected_vendor = self.new_vendor_var.get()
-        vendor_id = next((v[0] for v in self.vendor_list if v[1] == selected_vendor), None)
-        if vendor_id:
-            items = database.get_items_by_vendor(vendor_id)
-            self.new_item_menu['values'] = [i[1] for i in items]
-            self.new_item_menu.filtered_items = items
 
     def delete_selected_row(self):
         if not self.tree.selection():
@@ -202,7 +185,7 @@ class EditInvoiceWindow(tk.Toplevel):
             self.tree.delete(row_id)
 
         self.reapply_row_tags()
-    
+
     def save_changes(self):
         if not self.selected_invoice_id:
             return
@@ -237,13 +220,10 @@ class EditInvoiceWindow(tk.Toplevel):
                 if confirm_delete:
                     database.delete_invoice(self.selected_invoice_id)
                     messagebox.showinfo("Invoice Deleted", "The empty invoice has been deleted.")
-
-                    # ⬇️ OPTIONAL: show or refresh main window
-                    if hasattr(self.master, 'deiconify'):  # for Tk root
+                    if hasattr(self.master, 'deiconify'):
                         self.master.deiconify()
-                    elif hasattr(self.master, 'refresh'):  # for main window callback
+                    elif hasattr(self.master, 'refresh'):
                         self.master.refresh()
-
                     self.destroy()
                     return
                 else:
@@ -255,20 +235,31 @@ class EditInvoiceWindow(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update invoice: {e}")
 
-
     def load_invoice_items_from_id(self, invoice_id):
         self.tree.delete(*self.tree.get_children())
         self.tree_full_data.clear()
         self.invoice_items = database.get_invoice_items(invoice_id)
         self.selected_invoice_id = invoice_id
+
         for index, item in enumerate(self.invoice_items):
             tag = 'evenrow' if index % 2 == 0 else 'oddrow'
-            row_id = self.tree.insert("", "end", values=(item[1], item[2], item[3], item[4], item[5]), tags=(tag,))
+            vendor_name = item[1]
+            item_name = item[3]
+            quantity = item[4]
+            unit_price = item[5]
+            optional_info = item[6] if item[6] is not None else ""
+
+            row_id = self.tree.insert(
+                "", "end",
+                values=(vendor_name, item_name, quantity, unit_price, optional_info),
+                tags=(tag,)
+            )
+
             self.tree_full_data[row_id] = {
                 "existing_id": item[0],
-                "quantity": item[3],
-                "unit_price": item[4],
-                "optional_info": item[5]
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "optional_info": optional_info
             }
 
     def load_invoice_items(self, event=None):
@@ -278,7 +269,7 @@ class EditInvoiceWindow(tk.Toplevel):
         invoice_index = self.invoice_menu.current()
         self.selected_invoice_id = self.invoices[invoice_index][0]
         self.load_invoice_items_from_id(self.selected_invoice_id)
-        
+
     def reapply_row_tags(self):
         children = self.tree.get_children()
         for i, row_id in enumerate(children):
@@ -315,11 +306,11 @@ class EditInvoiceWindow(tk.Toplevel):
         generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath)
         messagebox.showinfo("Success", f"PDF saved to:{filepath}")
         try:
-            if platform.system() == 'Darwin':  # macOS
+            if platform.system() == 'Darwin':
                 subprocess.call(('open', filepath))
-            elif platform.system() == 'Windows':  # Windows
+            elif platform.system() == 'Windows':
                 os.startfile(filepath)
-            elif platform.system() == 'Linux':  # Linux
+            elif platform.system() == 'Linux':
                 subprocess.call(('xdg-open', filepath))
             else:
                 messagebox.showwarning("Unsupported OS", f"Cannot open PDF on {platform.system()}")

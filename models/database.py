@@ -29,23 +29,25 @@ def get_all_vendors():
 # Item Operations
 # -------------------
 
-def add_item(name, vendor_id, item_code):
+def add_item(name, item_code):
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO items (name, vendor_id, item_code) VALUES (?, ?, ?)", (name, vendor_id, item_code))
+        cursor.execute("INSERT INTO items (name, item_code) VALUES (?, ?)", (name, item_code))
         conn.commit()
-
-def get_items_by_vendor(vendor_id):
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM items WHERE vendor_id = ? ORDER BY name", (vendor_id,))
-        return cursor.fetchall()
 
 def get_all_items():
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, vendor_id, item_code FROM items")
+        cursor.execute("SELECT id, name, item_code FROM items ORDER BY name")
         return cursor.fetchall()
+    
+def get_item_id_by_name(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM items WHERE name = ?", (name,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else None
 
 # -------------------
 # Invoice Operations
@@ -63,17 +65,17 @@ def get_invoice_items(invoice_id):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT ii.id as item_id,
-                   vendors.name as vendor_name,
-                   items.name as item_name,
-                   ii.quantity,
-                   ii.unit_price,
-                   ii.optional_info,
-                   items.item_code as item_code
+                v.name as vendor_name,
+                i.item_code,
+                i.name as item_name,
+                ii.quantity,
+                ii.unit_price,
+                ii.optional_info
             FROM invoice_items ii
-            JOIN items ON ii.item_id = items.id
-            JOIN vendors ON items.vendor_id = vendors.id
+            JOIN items i ON ii.item_id = i.id
+            JOIN vendors v ON ii.vendor_id = v.id
             WHERE ii.invoice_id = ?
-        """, (invoice_id,))
+""", (invoice_id,))
         return cursor.fetchall()
 
 def update_invoice(invoice_db_id, items, deleted_ids=None):
@@ -116,14 +118,7 @@ def get_invoice_details(invoice_id):
         return dict(row) if row else None
 
 
-def add_item_code_column():
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        try:
-            cursor.execute("ALTER TABLE items ADD COLUMN item_code TEXT UNIQUE")
-            conn.commit()
-        except Exception:
-            pass  # Already added
+
 
 def create_blank_invoice():
     with get_connection() as conn:
