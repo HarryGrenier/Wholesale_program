@@ -7,7 +7,7 @@ from models.database import create_blank_invoice
 from ui.settings import SettingsWindow
 from models.cleanup_old_invoices import delete_old_invoices
 from ui.saved_invoices_window import SavedInvoicesWindow
-
+from models.setup import run_setup
 def open_saved_invoices_window():
     root.withdraw()
     win = SavedInvoicesWindow(root)
@@ -66,6 +66,7 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+    run_setup()
     try:
         delete_old_invoices()
     except Exception as e:

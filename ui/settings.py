@@ -61,6 +61,8 @@ class SettingsWindow(tk.Toplevel):
         self.even_color_entry.insert(0, self.settings["row_colors"]["even"])
         self.even_color_entry.grid(row=0, column=1)
         ttk.Button(frame, text="Pick", command=lambda: self.pick_color(self.even_color_entry)).grid(row=0, column=2)
+        ttk.Button(frame, text="Reset", command=lambda: self.even_color_entry.delete(0, tk.END) or self.even_color_entry.insert(0, DEFAULT_SETTINGS["row_colors"]["even"])).grid(row=0, column=3)
+
 
         # Odd Row Color
         ttk.Label(frame, text="Odd Row Color:").grid(row=1, column=0, sticky="w")
@@ -68,6 +70,8 @@ class SettingsWindow(tk.Toplevel):
         self.odd_color_entry.insert(0, self.settings["row_colors"]["odd"])
         self.odd_color_entry.grid(row=1, column=1)
         ttk.Button(frame, text="Pick", command=lambda: self.pick_color(self.odd_color_entry)).grid(row=1, column=2)
+        ttk.Button(frame, text="Reset", command=lambda: self.odd_color_entry.delete(0, tk.END) or self.odd_color_entry.insert(0, DEFAULT_SETTINGS["row_colors"]["odd"])).grid(row=1, column=3)
+
 
         # PDF Output Directory
         ttk.Label(frame, text="PDF Output Directory:").grid(row=2, column=0, columnspan=3, sticky="w", pady=(10, 0))
