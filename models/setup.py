@@ -1,9 +1,14 @@
 import os
 import json
 from models.database_creation import create_tables
-from ui.settings import DEFAULT_SETTINGS, SETTINGS_FILE
+from ui.settings import DEFAULT_SETTINGS
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "Data")
+# Compute the project root directory
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))  # path to /models
+PROJECT_ROOT = os.path.dirname(PROJECT_ROOT)               # go up to root
+
+DATA_DIR = os.path.join(PROJECT_ROOT, "Data")
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 DB_PATH = os.path.join(DATA_DIR, "invoice.db")
 
 def ensure_data_directory():
