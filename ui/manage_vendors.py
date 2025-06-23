@@ -82,22 +82,17 @@ class ManageVendorsWindow(tk.Toplevel):
             messagebox.showwarning("No Selection", "Select a vendor to delete.")
             return
 
-        vendor_name = self.vendor_name_var.get()
-
-        confirm = messagebox.askyesno("Confirm", f"Delete vendor '{vendor_name}'?")
+        confirm = messagebox.askyesno("Confirm", "Mark this vendor as inactive?")
         if not confirm:
             return
 
         try:
-            conn = database.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM vendors WHERE id = ?", (self.selected_vendor_id,))
-            conn.commit()
-            conn.close()
+            database.soft_delete_vendor(self.selected_vendor_id)
             self.refresh_vendor_list()
-            messagebox.showinfo("Deleted", f"Vendor '{vendor_name}' was deleted.")
+            messagebox.showinfo("Vendor Deactivated", "Vendor has been marked as inactive.")
         except Exception as e:
-            messagebox.showerror("Error", f"Could not delete vendor: {e}")
+            messagebox.showerror("Error", f"Could not deactivate vendor: {e}")
+
 
     
     def destroy(self):

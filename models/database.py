@@ -16,18 +16,31 @@ def add_vendor(name):
         cursor.execute("INSERT INTO vendors (name) VALUES (?)", (name,))
         conn.commit()
 
-def get_all_vendors():
+def get_all_vendors(active_only=True):
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM vendors ORDER BY name")
+        if active_only:
+            cursor.execute("SELECT id, name FROM vendors WHERE active = 1 ORDER BY name")
+        else:
+            cursor.execute("SELECT id, name FROM vendors ORDER BY name")
         return cursor.fetchall()
 
-
+def soft_delete_vendor(vendor_id):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE vendors SET active = 0 WHERE id = ?", (vendor_id,))
+        conn.commit()
 
 
 # -------------------
 # Item Operations
 # -------------------
+
+def soft_delete_item(item_id):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE items SET active = 0 WHERE id = ?", (item_id,))
+        conn.commit()
 
 def add_item(name, item_code):
     with get_connection() as conn:
@@ -35,10 +48,13 @@ def add_item(name, item_code):
         cursor.execute("INSERT INTO items (name, item_code) VALUES (?, ?)", (name, item_code))
         conn.commit()
 
-def get_all_items():
+def get_all_items(active_only=True):
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, item_code FROM items ORDER BY name")
+        if active_only:
+            cursor.execute("SELECT id, name, item_code FROM items WHERE active = 1 ORDER BY name")
+        else:
+            cursor.execute("SELECT id, name, item_code FROM items ORDER BY name")
         return cursor.fetchall()
     
 def get_item_id_by_name(name):

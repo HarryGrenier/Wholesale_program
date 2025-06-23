@@ -4,21 +4,23 @@ def create_tables():
     conn = sqlite3.connect("Data/invoice.db")
     cursor = conn.cursor()
 
-    # Create Vendors Table
+    # Vendors Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS vendors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            name TEXT NOT NULL UNIQUE,
+            active INTEGER NOT NULL DEFAULT 1
         )
     ''')
 
-    # Create Items Table
+    # Items Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        item_code TEXT UNIQUE
-        );
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            item_code TEXT UNIQUE,
+            active INTEGER NOT NULL DEFAULT 1
+        )
     ''')
 
     # Create Invoices Table

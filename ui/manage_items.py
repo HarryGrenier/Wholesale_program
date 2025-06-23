@@ -99,34 +99,24 @@ class ManageItemsWindow(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("Error", f"Could not rename item: {e}")
 
+    
+    
+        
     def delete_item(self):
         if self.selected_item_id is None:
             messagebox.showwarning("No Selection", "Select an item to delete.")
             return
 
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM invoice_items WHERE item_id = ?", (self.selected_item_id,))
-        count = cursor.fetchone()[0]
-        conn.close()
-
-        if count > 0:
-            messagebox.showerror("Blocked", "Cannot delete item used in invoices.")
-            return
-
-        confirm = messagebox.askyesno("Confirm", "Delete this item?")
+        # Optional: confirm soft deletion
+        confirm = messagebox.askyesno("Confirm", "Mark this item as inactive?")
         if not confirm:
             return
 
         try:
-            conn = database.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM items WHERE id = ?", (self.selected_item_id,))
-            conn.commit()
-            conn.close()
+            database.soft_delete_item(self.selected_item_id)
             self.refresh_item_list()
         except Exception as e:
-            messagebox.showerror("Error", f"Could not delete item: {e}")
+            messagebox.showerror("Error", f"Could not deactivate item: {e}")
 
     def destroy(self):
         if self.on_close:
