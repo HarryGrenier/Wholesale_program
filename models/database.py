@@ -64,34 +64,45 @@ def get_invoice_items(invoice_id):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT ii.id as item_id,
-                v.name as vendor_name,
-                i.item_code,
-                i.name as item_name,
-                ii.quantity,
-                ii.unit_price,
-                ii.optional_info
+            SELECT ii.id AS invoice_item_id,
+                   ii.vendor_id,
+                   v.name AS vendor_name,
+                   ii.item_id,
+                   i.name AS item_name,
+                   ii.quantity,
+                   ii.unit_price,
+                   ii.optional_info
             FROM invoice_items ii
             JOIN items i ON ii.item_id = i.id
             JOIN vendors v ON ii.vendor_id = v.id
             WHERE ii.invoice_id = ?
-""", (invoice_id,))
+        """, (invoice_id,))
         return cursor.fetchall()
 
 def update_invoice(invoice_db_id, items, deleted_ids=None):
     with get_connection() as conn:
         cursor = conn.cursor()
+
+        # Delete any marked rows
         if deleted_ids:
             for item_id in deleted_ids:
                 cursor.execute("DELETE FROM invoice_items WHERE id = ?", (item_id,))
 
         for item in items:
             if item.get("existing_id"):
+                # 🔧 UPDATE all relevant fields including vendor_id and item_id
                 cursor.execute(
                     '''UPDATE invoice_items
-                       SET quantity = ?, unit_price = ?, optional_info = ?
+                       SET vendor_id = ?, item_id = ?, quantity = ?, unit_price = ?, optional_info = ?
                        WHERE id = ?''',
-                    (item["quantity"], item["unit_price"], item.get("optional_info", ""), item["existing_id"])
+                    (
+                        item["vendor_id"],
+                        item["item_id"],
+                        item["quantity"],
+                        item["unit_price"],
+                        item.get("optional_info", ""),
+                        item["existing_id"]
+                    )
                 )
             else:
                 cursor.execute(
@@ -106,7 +117,9 @@ def update_invoice(invoice_db_id, items, deleted_ids=None):
                         item.get("optional_info", "")
                     )
                 )
+
         conn.commit()
+
 
 
 def get_invoice_details(invoice_id):

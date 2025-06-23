@@ -33,6 +33,9 @@ class EditInvoiceWindow(tk.Toplevel):
         self.tree_full_data = {}
         self.deleted_ids = set()
 
+        self.vendor_list = database.get_all_vendors()
+        self.item_list = [i[1] for i in database.get_all_items()]
+
         if invoice_db_id is None:
             self.invoices = database.get_all_invoices()
         else:
@@ -81,16 +84,23 @@ class EditInvoiceWindow(tk.Toplevel):
             row_id = self.tree.identify_row(event.y)
             col_id = self.tree.identify_column(event.x)
             col = int(col_id.replace('#', '')) - 1
-            if col not in [2, 3, 4]: return
             x, y, width, height = self.tree.bbox(row_id, col_id)
             current_val = self.tree.item(row_id)['values'][col]
 
-            entry = tk.Entry(self.tree)
-            entry.place(x=x, y=y, width=width, height=height)
-            entry.insert(0, current_val)
-            entry.focus()
+            def save_combo(event):
+                new_val = combo.get()
+                values = list(self.tree.item(row_id)['values'])
+                values[col] = new_val
+                self.tree.item(row_id, values=values)
+                if col == 0:
+                    vendor_id = next((v[0] for v in self.vendor_list if v[1] == new_val), None)
+                    self.tree_full_data[row_id]['vendor_id'] = vendor_id
+                elif col == 1:
+                    item_id = database.get_item_id_by_name(new_val)
+                    self.tree_full_data[row_id]['item_id'] = item_id
+                combo.destroy()
 
-            def save_edit(event):
+            def save_entry(event):
                 new_val = entry.get()
                 values = list(self.tree.item(row_id)['values'])
                 try:
@@ -109,8 +119,21 @@ class EditInvoiceWindow(tk.Toplevel):
                     messagebox.showerror("Invalid Input", f"Invalid value for {columns[col]}.")
                 entry.destroy()
 
-            entry.bind("<Return>", save_edit)
-            entry.bind("<FocusOut>", lambda e: entry.destroy())
+            if col in [0, 1]:
+                combo_values = [v[1] for v in self.vendor_list] if col == 0 else self.item_list
+                combo = ttk.Combobox(self.tree, values=combo_values, state="readonly")
+                combo.place(x=x, y=y, width=width, height=height)
+                combo.set(current_val)
+                combo.focus()
+                combo.bind("<Return>", save_combo)
+                combo.bind("<FocusOut>", lambda e: combo.destroy())
+            else:
+                entry = tk.Entry(self.tree)
+                entry.place(x=x, y=y, width=width, height=height)
+                entry.insert(0, current_val)
+                entry.focus()
+                entry.bind("<Return>", save_entry)
+                entry.bind("<FocusOut>", lambda e: entry.destroy())
 
         self.tree.bind("<Double-1>", on_double_click)
 
@@ -122,9 +145,6 @@ class EditInvoiceWindow(tk.Toplevel):
         self.new_quantity_var = tk.IntVar(value=self.settings["defaults"].get("quantity", 1))
         self.new_price_var = tk.DoubleVar(value=self.settings["defaults"].get("unit_price", 0.0))
         self.new_info_var = tk.StringVar()
-
-        self.vendor_list = database.get_all_vendors()
-        self.item_list = [i[1] for i in database.get_all_items()]
 
         ttk.Label(frame, text="Vendor:").grid(row=0, column=0, padx=5, sticky="w")
         ttk.Combobox(frame, textvariable=self.new_vendor_var, values=[v[1] for v in self.vendor_list], state="readonly", width=20).grid(row=2, column=0, padx=5)
@@ -201,6 +221,8 @@ class EditInvoiceWindow(tk.Toplevel):
             if data.get("existing_id") is not None:
                 updated_items.append({
                     "existing_id": data["existing_id"],
+                    "vendor_id": data["vendor_id"],
+                    "item_id": data["item_id"],
                     "quantity": data["quantity"],
                     "unit_price": data["unit_price"],
                     "optional_info": data["optional_info"]
@@ -243,11 +265,15 @@ class EditInvoiceWindow(tk.Toplevel):
 
         for index, item in enumerate(self.invoice_items):
             tag = 'evenrow' if index % 2 == 0 else 'oddrow'
-            vendor_name = item[1]
-            item_name = item[3]
-            quantity = item[4]
-            unit_price = item[5]
-            optional_info = item[6] if item[6] is not None else ""
+            item_id = item["item_id"]
+            vendor_name = item["vendor_name"]
+            item_name = item["item_name"]
+            quantity = item["quantity"]
+            unit_price = item["unit_price"]
+            optional_info = item["optional_info"] if item["optional_info"] else ""
+
+            # Get vendor_id from name
+            vendor_id = next((v[0] for v in self.vendor_list if v[1] == vendor_name), None)
 
             row_id = self.tree.insert(
                 "", "end",
@@ -256,7 +282,9 @@ class EditInvoiceWindow(tk.Toplevel):
             )
 
             self.tree_full_data[row_id] = {
-                "existing_id": item[0],
+                "existing_id": item["invoice_item_id"],
+                "vendor_id": vendor_id,
+                "item_id": item_id,
                 "quantity": quantity,
                 "unit_price": unit_price,
                 "optional_info": optional_info
