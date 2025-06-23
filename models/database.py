@@ -81,17 +81,19 @@ def get_invoice_items(invoice_id):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT ii.id AS invoice_item_id,
-                   ii.vendor_id,
-                   v.name AS vendor_name,
-                   ii.item_id,
-                   i.name AS item_name,
-                   ii.quantity,
-                   ii.unit_price,
-                   ii.optional_info
+                ii.vendor_id,
+                v.name AS vendor_name,
+                ii.item_id,
+                i.name AS item_name,
+                i.item_code,
+                ii.quantity,
+                ii.unit_price,
+                ii.optional_info
             FROM invoice_items ii
             JOIN items i ON ii.item_id = i.id
             JOIN vendors v ON ii.vendor_id = v.id
             WHERE ii.invoice_id = ?
+
         """, (invoice_id,))
         return cursor.fetchall()
 

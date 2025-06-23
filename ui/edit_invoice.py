@@ -32,7 +32,8 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_items = []
         self.tree_full_data = {}
         self.deleted_ids = set()
-
+        self.unsaved_changes = False
+        
         self.vendor_list = database.get_all_vendors()
         self.item_list = [i[1] for i in database.get_all_items()]
 
@@ -88,6 +89,7 @@ class EditInvoiceWindow(tk.Toplevel):
             current_val = self.tree.item(row_id)['values'][col]
 
             def save_combo(event):
+                self.unsaved_changes = True
                 new_val = combo.get()
                 values = list(self.tree.item(row_id)['values'])
                 values[col] = new_val
@@ -101,6 +103,7 @@ class EditInvoiceWindow(tk.Toplevel):
                 combo.destroy()
 
             def save_entry(event):
+                self.unsaved_changes = True
                 new_val = entry.get()
                 values = list(self.tree.item(row_id)['values'])
                 try:
@@ -166,6 +169,7 @@ class EditInvoiceWindow(tk.Toplevel):
         ttk.Button(frame, text="Export to PDF", command=self.export_to_pdf).pack(side="right", padx=5)
 
     def add_new_row_to_table(self):
+        self.unsaved_changes = True
         item_name = self.new_item_var.get()
         vendor_name = self.new_vendor_var.get()
         qty = self.new_quantity_var.get()
@@ -189,6 +193,7 @@ class EditInvoiceWindow(tk.Toplevel):
         }
 
     def delete_selected_row(self):
+        self.unsaved_changes = True
         if not self.tree.selection():
             messagebox.showwarning("No Selection", "Please select a row to delete.")
             return
@@ -212,6 +217,7 @@ class EditInvoiceWindow(tk.Toplevel):
 
         if self.settings.get("confirmations", {}).get("on_save", True):
             confirm = messagebox.askyesno("Save Changes", "Are you sure you want to save all changes to this invoice?")
+            self.unsaved_changes = False
             if not confirm:
                 return
 
@@ -308,6 +314,13 @@ class EditInvoiceWindow(tk.Toplevel):
         if not self.selected_invoice_id:
             messagebox.showerror("No Invoice", "Please select an invoice to export.")
             return
+
+        if self.unsaved_changes:
+            confirm = messagebox.askyesno("Unsaved Changes", "There are unsaved changes.\nDo you want to save before exporting?")
+            if confirm:
+                self.save_changes()
+            else:
+                return
         default_dir = self.settings.get("pdf_output_directory", "")
         order_date = database.get_invoice_details(self.selected_invoice_id)["date"]
         formatted_date = datetime.strptime(order_date, "%Y-%m-%d").strftime("%Y%m%d")
