@@ -1,0 +1,21 @@
+{
+    "invoice_retention": {
+        "years": 2,
+        "months": 0
+    },
+    "row_colors": {
+        "even": "#f4f4f4",
+        "odd": "#ffffff"
+    },
+    "pdf_output_directory": "",
+    "defaults": {
+        "quantity": 1,
+        "unit_price": 0.0
+    },
+    "window_mode": "zoomed",
+    "confirmations": {
+        "on_save": true,
+        "on_delete": true
+    },
+    "pdf_filename_format": "invoice_{id}_{date}"
+}

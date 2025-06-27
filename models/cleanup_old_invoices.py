@@ -39,5 +39,20 @@ def delete_old_invoices():
 
     conn.commit()
     conn.close()
+    
+def delete_empty_invoices():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Delete invoices that have no corresponding items
+    cursor.execute('''
+        DELETE FROM invoices
+        WHERE id NOT IN (
+            SELECT DISTINCT invoice_id FROM invoice_items
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
 if __name__ == "__main__":
     delete_old_invoices()
