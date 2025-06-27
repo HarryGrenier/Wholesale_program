@@ -9,7 +9,7 @@ import platform
 import subprocess
 
 class EditInvoiceWindow(tk.Toplevel):
-    def __init__(self, master, invoice_db_id=None):
+    def __init__(self, master, NewInvoice=False ,invoice_db_id=None):
         super().__init__(master)
         self.settings = load_settings()
 
@@ -28,10 +28,12 @@ class EditInvoiceWindow(tk.Toplevel):
         self.even_color = self.settings["row_colors"].get("even", "#f4f4f4")
         self.odd_color = self.settings["row_colors"].get("odd", "#ffffff")
 
+        self.NewInvoiceFlag = NewInvoice
         self.selected_invoice_id = invoice_db_id
         self.invoice_items = []
         self.tree_full_data = {}
         self.deleted_ids = set()
+        self.invoice_info_label = None
         self.unsaved_changes = False
         
         self.vendor_list = database.get_all_vendors()
@@ -39,9 +41,12 @@ class EditInvoiceWindow(tk.Toplevel):
 
         if invoice_db_id is None:
             self.invoices = database.get_all_invoices()
+            if self.invoices:
+                self.selected_invoice_id = self.invoices[0][0]
         else:
             self.invoices = []
 
+    
         self.setup_invoice_selector()
         ttk.Separator(self, orient="horizontal").pack(fill='x', padx=10, pady=5)
         self.setup_treeview()
@@ -52,11 +57,13 @@ class EditInvoiceWindow(tk.Toplevel):
 
         if invoice_db_id:
             self.load_invoice_items_from_id(invoice_db_id)
+        if self.selected_invoice_id:
+            self.load_invoice_items_from_id(self.selected_invoice_id)
 
     def setup_invoice_selector(self):
         frame = ttk.LabelFrame(self, text="📄 Invoice Selection")
         frame.pack(fill='x', padx=10, pady=5)
-        if self.selected_invoice_id:
+        if self.NewInvoiceFlag:
             ttk.Label(frame, text=f"Invoice ID: {self.selected_invoice_id}").pack(side="left")
             return
         self.invoice_var = tk.StringVar()
@@ -67,6 +74,8 @@ class EditInvoiceWindow(tk.Toplevel):
 
     def setup_treeview(self):
         tree_frame = ttk.LabelFrame(self, text="📦 Line Items")
+        self.invoice_info_label = ttk.Label(tree_frame, text="", font=('Segoe UI', 10, 'bold'), anchor="w")
+        self.invoice_info_label.pack(fill='x', padx=5, pady=(0, 5))
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
 
         columns = ("vendor", "item", "quantity", "price", "optional_info")
@@ -268,6 +277,10 @@ class EditInvoiceWindow(tk.Toplevel):
         self.tree_full_data.clear()
         self.invoice_items = database.get_invoice_items(invoice_id)
         self.selected_invoice_id = invoice_id
+        details = database.get_invoice_details(invoice_id)
+        if details and self.invoice_info_label:
+            date_str = datetime.strptime(details["date"], "%Y-%m-%d").strftime("%B %d, %Y")
+            self.invoice_info_label.config(text=f"🧾 Invoice ID: {details['id']}   📅 Date: {date_str}")
 
         for index, item in enumerate(self.invoice_items):
             tag = 'evenrow' if index % 2 == 0 else 'oddrow'

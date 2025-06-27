@@ -22,7 +22,7 @@ def on_close_subwindow(window):
 def open_new_invoice():
     invoice_id = create_blank_invoice()
     root.withdraw()
-    win = EditInvoiceWindow(root, invoice_db_id=invoice_id)
+    win = EditInvoiceWindow(root, NewInvoice=True, invoice_db_id=invoice_id)
     win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
     
 
