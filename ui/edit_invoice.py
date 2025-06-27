@@ -36,8 +36,9 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_info_label = None
         self.unsaved_changes = False
         
-        self.vendor_list = database.get_all_vendors()
-        self.item_list = [i[1] for i in database.get_all_items()]
+        self.vendor_list = sorted(database.get_all_vendors(), key=lambda v: v[1].lower())
+        self.item_list = sorted([i[1] for i in database.get_all_items()], key=lambda name: name.lower())
+
 
         if invoice_db_id is None:
             self.invoices = database.get_all_invoices()
