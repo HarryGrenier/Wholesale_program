@@ -21,7 +21,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.option_add("*Font", default_font)
 
         style = ttk.Style()
-        style.configure("Treeview", rowheight=28, font=default_font)
+        style.configure("Treeview", rowheight=20, font=default_font)
         style.configure("Treeview.Heading", font=('Segoe UI', 10, 'bold'))
         style.map("Treeview", background=[("selected", "#cce5ff")], foreground=[("selected", "black")])
 
