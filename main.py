@@ -5,7 +5,7 @@ from ui.manage_vendors import ManageVendorsWindow
 from ui.manage_items import ManageItemsWindow
 from models.database import create_blank_invoice
 from ui.settings import SettingsWindow
-from models.cleanup_old_invoices import delete_old_invoices
+from models.cleanup_old_invoices import delete_old_invoices, delete_empty_invoices
 from ui.saved_invoices_window import SavedInvoicesWindow
 
 
@@ -22,7 +22,7 @@ def on_close_subwindow(window):
 def open_new_invoice():
     invoice_id = create_blank_invoice()
     root.withdraw()
-    win = EditInvoiceWindow(root, invoice_db_id=invoice_id)
+    win = EditInvoiceWindow(root, NewInvoice=True, invoice_db_id=invoice_id)
     win.protocol("WM_DELETE_WINDOW", lambda: on_close_subwindow(win))
     
 
@@ -69,6 +69,7 @@ def main():
 if __name__ == "__main__":
     try:
         delete_old_invoices()
+        delete_empty_invoices()
     except Exception as e:
         print(f"Error during cleanup: {e}")
     main()
