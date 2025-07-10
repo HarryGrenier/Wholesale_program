@@ -105,7 +105,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
     grouped = group_invoice_items(invoice_items)
     grand_total_qty = 0
     grand_total_cost = 0
-    for vendor in sorted(grouped.keys()):
+    for vendor in sorted(grouped.keys(), key=lambda v: v.lower()):
         items = grouped[vendor]
         subtotal_qty = 0
         subtotal_cost = 0
