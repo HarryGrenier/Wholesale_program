@@ -13,6 +13,15 @@ class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, NewInvoice=False ,invoice_db_id=None):
         super().__init__(master)
         self.settings = load_settings()
+        
+        self.case_fee = float(self.settings.get("case_fee", 0.0))
+
+        def _price_plus_fee(val,val2):
+            try:
+                return round(float(val) + float(val2)*self.case_fee, 2)
+            except Exception:
+                return ""
+        self._price_plus_fee = _price_plus_fee
 
         self.title("📋 Edit Invoice - Wholesale Manager")
         if self.settings.get("window_mode", "zoomed") == "zoomed":
@@ -59,9 +68,10 @@ class EditInvoiceWindow(tk.Toplevel):
 
         if invoice_db_id:
             self.load_invoice_items_from_id(invoice_db_id)
-        if self.selected_invoice_id:
+        elif self.selected_invoice_id:
             self.load_invoice_items_from_id(self.selected_invoice_id)
-
+            
+            
     def setup_invoice_selector(self):
         frame = ttk.LabelFrame(self, text="📄 Invoice Selection")
         frame.pack(fill='x', padx=10, pady=5)
@@ -80,7 +90,7 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_info_label.pack(fill='x', padx=5, pady=(0, 5))
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
 
-        columns = ("vendor", "item", "quantity", "price", "optional_info")
+        columns = ("vendor", "item", "quantity", "price", "price_plus_fee", "optional_info")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=18)
         for col in columns:
             self.tree.heading(col, text=col.replace("_", " ").title())
@@ -96,6 +106,8 @@ class EditInvoiceWindow(tk.Toplevel):
             row_id = self.tree.identify_row(event.y)
             col_id = self.tree.identify_column(event.x)
             col = int(col_id.replace('#', '')) - 1
+            if columns[col] == "price_plus_fee":
+                return
             x, y, width, height = self.tree.bbox(row_id, col_id)
             current_val = self.tree.item(row_id)['values'][col]
 
@@ -117,20 +129,29 @@ class EditInvoiceWindow(tk.Toplevel):
                 self.unsaved_changes = True
                 new_val = entry.get()
                 values = list(self.tree.item(row_id)['values'])
+
                 try:
                     if col == 2:
                         new_val_cast = int(new_val)
                         self.tree_full_data[row_id]['quantity'] = new_val_cast
+
                     elif col == 3:
                         new_val_cast = float(new_val)
                         self.tree_full_data[row_id]['unit_price'] = new_val_cast
+
+                        # Update derived column
+                        values[4] = round(new_val_cast + self.case_fee, 2)
+
                     else:
                         new_val_cast = new_val
                         self.tree_full_data[row_id]['optional_info'] = new_val_cast
+
                     values[col] = new_val_cast
                     self.tree.item(row_id, values=values)
+
                 except ValueError:
                     messagebox.showerror("Invalid Input", f"Invalid value for {columns[col]}.")
+
                 entry.destroy()
 
             if col in [0, 1]:
@@ -193,6 +214,7 @@ class EditInvoiceWindow(tk.Toplevel):
         vendor_name = self.new_vendor_var.get()
         qty = self.new_quantity_var.get()
         price = self.new_price_var.get()
+        Case_fee_calculation = self._price_plus_fee(price,qty)
         info = self.new_info_var.get()
         if not item_name or not vendor_name:
             messagebox.showwarning("Missing Info", "Please select both item and vendor.")
@@ -201,7 +223,8 @@ class EditInvoiceWindow(tk.Toplevel):
         vendor_id = next((v[0] for v in self.vendor_list if v[1] == vendor_name), None)
         index = len(self.tree.get_children())
         tag = 'evenrow' if index % 2 == 0 else 'oddrow'
-        row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price, info), tags=(tag,))
+        
+        row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price,Case_fee_calculation, info), tags=(tag,))
         self.tree_full_data[row_id] = {
             "vendor_id": vendor_id,
             "item_id": item_id,
@@ -299,6 +322,7 @@ class EditInvoiceWindow(tk.Toplevel):
             item_name = item["item_name"]
             quantity = item["quantity"]
             unit_price = item["unit_price"]
+            Case_Fee_calculation = self._price_plus_fee(unit_price,quantity)
             optional_info = item["optional_info"] if item["optional_info"] else ""
 
             # Get vendor_id from name
@@ -306,7 +330,7 @@ class EditInvoiceWindow(tk.Toplevel):
 
             row_id = self.tree.insert(
                 "", "end",
-                values=(vendor_name, item_name, quantity, unit_price, optional_info),
+                values=(vendor_name, item_name, quantity, unit_price,Case_Fee_calculation, optional_info),
                 tags=(tag,)
             )
 

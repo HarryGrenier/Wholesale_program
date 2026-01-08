@@ -17,5 +17,6 @@
         "on_save": true,
         "on_delete": true
     },
-    "pdf_filename_format": "invoice_{id}_{date}"
+    "pdf_filename_format": "invoice_{id}_{date}",
+    "case_fee": 2.0
 }
