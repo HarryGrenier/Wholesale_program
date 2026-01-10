@@ -16,12 +16,26 @@ class EditInvoiceWindow(tk.Toplevel):
         
         self.case_fee = float(self.settings.get("case_fee", 0.0))
 
-        def _price_plus_fee(val,val2):
+        self.Wholesale_Markup = float(self.settings.get("Wholesale_Markup", 0.22))  # 22% markup for wholesale price calculation
+        self.retail_markup = float(self.settings.get("Retail_Markup", 0.50))     # 50% markup for retail price calculation
+        
+        def _price_with_fee(val):
             try:
-                return round(float(val) + float(val2)*self.case_fee, 2)
+                return round(float(val) + self.case_fee, 2)
             except Exception:
                 return ""
-        self._price_plus_fee = _price_plus_fee
+        self._price_with_fee = _price_with_fee
+        
+        def _markup_price(val, markup):
+            try:
+                if markup == "wholesale":
+                    return round(val * (1 + self.Wholesale_Markup), 2)
+                elif markup == "retail":
+                    return round(val * (1 + self.retail_markup), 2)
+                return 
+            except Exception:
+                return ""
+        self._markup_price = _markup_price
 
         self.title("📋 Edit Invoice - Wholesale Manager")
         if self.settings.get("window_mode", "zoomed") == "zoomed":
@@ -90,7 +104,11 @@ class EditInvoiceWindow(tk.Toplevel):
         self.invoice_info_label.pack(fill='x', padx=5, pady=(0, 5))
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
 
-        columns = ("vendor", "item", "quantity", "price", "price_plus_fee", "optional_info")
+        columns = (
+        "vendor", "item", "quantity", "price",
+        "price_with_fee", "optional_info",
+        "Wholesale_Sale_Price", "Retail_Sale_Price")
+        
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=18)
         for col in columns:
             self.tree.heading(col, text=col.replace("_", " ").title())
@@ -106,7 +124,7 @@ class EditInvoiceWindow(tk.Toplevel):
             row_id = self.tree.identify_row(event.y)
             col_id = self.tree.identify_column(event.x)
             col = int(col_id.replace('#', '')) - 1
-            if columns[col] == "price_plus_fee":
+            if columns[col] in ("price_with_fee", "Wholesale_Sale_Price", "Retail_Sale_Price"):
                 return
             x, y, width, height = self.tree.bbox(row_id, col_id)
             current_val = self.tree.item(row_id)['values'][col]
@@ -140,7 +158,14 @@ class EditInvoiceWindow(tk.Toplevel):
                         self.tree_full_data[row_id]['unit_price'] = new_val_cast
 
                         # Update derived column
-                        values[4] = round(new_val_cast + self.case_fee, 2)
+                        price_with_fee = self._price_with_fee(new_val_cast)
+                        values[4] = price_with_fee
+                        
+                        whole_sale_price = round(price_with_fee * (1 + self.Wholesale_Markup), 2)
+                        values[6] = whole_sale_price
+                        
+                        retail_Sale_Price = round(price_with_fee * (1 + self.retail_markup), 2)
+                        values[7] = retail_Sale_Price
 
                     else:
                         new_val_cast = new_val
@@ -214,8 +239,11 @@ class EditInvoiceWindow(tk.Toplevel):
         vendor_name = self.new_vendor_var.get()
         qty = self.new_quantity_var.get()
         price = self.new_price_var.get()
-        Case_fee_calculation = self._price_plus_fee(price,qty)
+        Case_fee_calculation = self._price_with_fee(price)
         info = self.new_info_var.get()
+        whole_sale_price = self._markup_price(Case_fee_calculation, "wholesale")
+        retail_Sale_Price = self._markup_price(Case_fee_calculation, "retail")
+        
         if not item_name or not vendor_name:
             messagebox.showwarning("Missing Info", "Please select both item and vendor.")
             return
@@ -224,7 +252,15 @@ class EditInvoiceWindow(tk.Toplevel):
         index = len(self.tree.get_children())
         tag = 'evenrow' if index % 2 == 0 else 'oddrow'
         
-        row_id = self.tree.insert("", "end", values=(vendor_name, item_name, qty, price,Case_fee_calculation, info), tags=(tag,))
+        row_id = self.tree.insert("", "end", values=(vendor_name,
+                                                     item_name,
+                                                     qty,
+                                                     price,
+                                                     Case_fee_calculation,
+                                                     info,
+                                                     whole_sale_price,
+                                                     retail_Sale_Price),
+                                  tags=(tag,))
         self.tree_full_data[row_id] = {
             "vendor_id": vendor_id,
             "item_id": item_id,
@@ -322,15 +358,23 @@ class EditInvoiceWindow(tk.Toplevel):
             item_name = item["item_name"]
             quantity = item["quantity"]
             unit_price = item["unit_price"]
-            Case_Fee_calculation = self._price_plus_fee(unit_price,quantity)
+            Case_Fee_calculation = self._price_with_fee(unit_price)
             optional_info = item["optional_info"] if item["optional_info"] else ""
+            whole_sale_price = self._markup_price(Case_Fee_calculation, "wholesale")
+            retail_Sale_Price = self._markup_price(Case_Fee_calculation, "retail")
 
             # Get vendor_id from name
             vendor_id = next((v[0] for v in self.vendor_list if v[1] == vendor_name), None)
 
             row_id = self.tree.insert(
                 "", "end",
-                values=(vendor_name, item_name, quantity, unit_price,Case_Fee_calculation, optional_info),
+                values=(vendor_name,
+                        item_name,
+                        quantity,
+                        unit_price,
+                        Case_Fee_calculation, optional_info,
+                        whole_sale_price,
+                        retail_Sale_Price),
                 tags=(tag,)
             )
 

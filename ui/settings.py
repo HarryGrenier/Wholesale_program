@@ -26,7 +26,9 @@ DEFAULT_SETTINGS = {
         "on_delete": True
     },
     "pdf_filename_format": "invoice_{id}_{date}",
-    "case_fee": 2.00
+    "case_fee": 2.00,
+    "Wholesale_Markup": 0.22,
+    "Retail_Markup": 0.50
 }
 
 
@@ -105,16 +107,27 @@ class SettingsWindow(tk.Toplevel):
         self.filename_format_entry.insert(0, self.settings.get("pdf_filename_format", "invoice_{id}_{date}"))
         self.filename_format_entry.grid(row=10, column=1, columnspan=2, sticky="w")
 
-         # PDF Filename Format
+         # Case Fee Amount
         ttk.Label(frame, text="Case Fee amount:").grid(row=12, column=0, sticky="w", pady=(10, 0))
         self.case_fee_entry = ttk.Entry(frame, width=30)
         self.case_fee_entry.insert(0, self.settings.get("case_fee", 2.00))
         self.case_fee_entry.grid(row=12, column=1, columnspan=2, sticky="w")
         
+        # Case Fee Amount
+        ttk.Label(frame, text="Wholesale Markup:").grid(row=13, column=0, sticky="w", pady=(10, 0))
+        self.case_fee_entry = ttk.Entry(frame, width=30)
+        self.case_fee_entry.insert(0, self.settings.get("Wholesale_Markup", 0.22))
+        self.case_fee_entry.grid(row=13, column=1, columnspan=2, sticky="w")
+        
+        # Case Fee Amount
+        ttk.Label(frame, text="Retail Markup:").grid(row=14, column=0, sticky="w", pady=(10, 0))
+        self.retail_markup_entry = ttk.Entry(frame, width=30)
+        self.retail_markup_entry.insert(0, self.settings.get("Retail_Markup", 0.50))
+        self.retail_markup_entry.grid(row=14, column=1, columnspan=2, sticky="w")
+        
         # Save and Reset Buttons
-        ttk.Button(frame, text="Save Settings", command=self.save).grid(row=13, column=0, columnspan=3, pady=15)
-        ttk.Button(frame, text="Reset to Defaults", command=self.reset_defaults).grid(row=14, column=0, columnspan=3)        
-
+        ttk.Button(frame, text="Save Settings", command=self.save).grid(row=15, column=0, columnspan=3, pady=15)
+        ttk.Button(frame, text="Reset to Defaults", command=self.reset_defaults).grid(row=16, column=0, columnspan=3)        
 
     def pick_color(self, entry_widget):
         color = colorchooser.askcolor()[1]
@@ -142,6 +155,8 @@ class SettingsWindow(tk.Toplevel):
         self.settings["confirmations"]["on_delete"] = self.confirm_delete_var.get()
         self.settings["pdf_filename_format"] = self.filename_format_entry.get()
         self.settings["case_fee"] = float(self.case_fee_entry.get())
+        self.settings["Wholesale_Markup"] = float(self.case_fee_entry.get())
+        self.settings["Retail_Markup"] = float(self.retail_markup_entry.get())
 
         save_settings(self.settings)
         messagebox.showinfo("Settings", "Settings saved successfully!")
