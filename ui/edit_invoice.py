@@ -9,13 +9,67 @@ import os
 import platform
 import subprocess
 
+
+def ask_report_options(master):
+    popup = tk.Toplevel(master)
+    popup.title("Select reports to include")
+    popup.resizable(False, False)
+
+    popup.transient(master)
+    popup.grab_set()  # modal
+
+    # Defaults: both selected (change if you want)
+    rpt1 = tk.BooleanVar(value=True)   # Invoice Detail
+    rpt2 = tk.BooleanVar(value=True)   # Pricing & Margin Summary
+
+    result = {"value": None}
+
+    ttk.Label(popup, text="Which report(s) do you want to print?").pack(
+        padx=12, pady=(12, 8), anchor="w"
+    )
+
+    ttk.Checkbutton(popup, text="Report 1: Invoice Detail", variable=rpt1).pack(
+        padx=12, anchor="w"
+    )
+    ttk.Checkbutton(popup, text="Report 2: Pricing & Margin Summary", variable=rpt2).pack(
+        padx=12, pady=(0, 10), anchor="w"
+    )
+
+    btns = ttk.Frame(popup)
+    btns.pack(padx=12, pady=(0, 12), fill="x")
+
+    def on_both():
+        rpt1.set(True)
+        rpt2.set(True)
+
+    def on_ok():
+        # Require at least one
+        if not rpt1.get() and not rpt2.get():
+            messagebox.showwarning("Select a report", "Please choose at least one report.")
+            return
+        result["value"] = (rpt1.get(), rpt2.get())
+        popup.destroy()
+
+    def on_cancel():
+        result["value"] = None
+        popup.destroy()
+
+    ttk.Button(btns, text="Both", command=on_both).pack(side="left")
+    ttk.Button(btns, text="Cancel", command=on_cancel).pack(side="right")
+    ttk.Button(btns, text="OK", command=on_ok).pack(side="right", padx=(0, 8))
+
+    popup.protocol("WM_DELETE_WINDOW", on_cancel)
+
+    # wait until closed
+    master.wait_window(popup)
+    return result["value"]
+
 class EditInvoiceWindow(tk.Toplevel):
     def __init__(self, master, NewInvoice=False ,invoice_db_id=None):
         super().__init__(master)
         self.settings = load_settings()
         
         self.case_fee = float(self.settings.get("case_fee", 0.0))
-
         self.Wholesale_Markup = float(self.settings.get("Wholesale_Markup", 0.22))  # 22% markup for wholesale price calculation
         self.retail_markup = float(self.settings.get("Retail_Markup", 0.50))     # 50% markup for retail price calculation
         
@@ -385,7 +439,7 @@ class EditInvoiceWindow(tk.Toplevel):
             Case_Fee_calculation = self._price_with_fee(unit_price)
             optional_info = item["optional_info"] if item["optional_info"] else ""
             Markup_percent_wholesale = str(int(self.Wholesale_Markup * 100))+"%"
-            whole_sale_price = "$"+str(self._markup_price(Case_Fee_calculation, "wholesale")),
+            whole_sale_price = "$"+str(self._markup_price(Case_Fee_calculation, "wholesale"))
             retail_Sale_Price = "$"+str(self._markup_price(Case_Fee_calculation, "retail"))
 
             # Get vendor_id from name
@@ -439,6 +493,18 @@ class EditInvoiceWindow(tk.Toplevel):
                 self.save_changes()
             else:
                 return
+            
+        report_choice = ask_report_options(self)   # (True/False, True/False) or None
+        if report_choice is None:
+            return  # user cancelled
+        include_report1, include_report2 = report_choice
+        if include_report1 == True and include_report2 == True:
+            options = 0
+        elif include_report1 == True:
+            options = 1
+        elif include_report2 == True:
+            options = 2
+        
         default_dir = self.settings.get("pdf_output_directory", "")
         order_date = database.get_invoice_details(self.selected_invoice_id)["date"]
         formatted_date = datetime.strptime(order_date, "%Y-%m-%d").strftime("%Y%m%d")
@@ -462,7 +528,8 @@ class EditInvoiceWindow(tk.Toplevel):
             "quantity": row["quantity"],
             "unit_price": row["unit_price"]
         } for row in raw_items]
-        generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath)
+        
+        generate_pdf_invoice(self.selected_invoice_id, order_date, invoice_items, filepath, options)
         messagebox.showinfo("Success", f"PDF saved to:{filepath}")
         try:
             if platform.system() == 'Darwin':
