@@ -1,5 +1,11 @@
 # models/pricing.py
 
+
+"""
+Check if i used this 
+"""
+
+
 def price_with_fee(unit_price, case_fee):
     return round(float(unit_price) + float(case_fee), 2)
 
