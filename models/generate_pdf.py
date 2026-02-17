@@ -92,7 +92,7 @@ def markup_price(cost, markup_rate):
 # Main PDF Generation Function
 ##############################################################
 
-from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.pagesizes import LETTER, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from collections import defaultdict
@@ -140,6 +140,8 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
     c = canvas.Canvas(filename, pagesize=LETTER)
     width, height = LETTER
 
+    land_w, land_h = landscape(LETTER)
+    
     def draw_main_header():
         c.setFont("Helvetica-Bold", 16)
         c.drawString(1 * inch, height - 1 * inch, "Wholesale Invoices - Accounting Report")
@@ -225,41 +227,60 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
         # Get settings
         settings = load_settings()
         case_fee = float(settings.get("case_fee", 0.0))
-        Wholesale_Markup = float(settings.get("Wholesale_Markup", 0.22))  # 22% markup for wholesale price calculation
-        Retail_Markup = float(settings.get("Retail_Markup", 0.50))     # 50% markup for retail price calculation
-        
-        # --- Page 2 column setup ---
-        headers2 = ["Vendor", "Item", "Qty", "Base Cost", "Unit + Fee", "22% Markup", "50% Markup"]
-        col_widths2 = [1.5, 1.5, 0.5, 0.7, 0.8, 0.8, 0.8]  # 7 widths for 7 headers
+        Retail_Markup = float(settings.get("Retail_Markup", 0.50))
+
+        # Pull list + normalize + remove zeros
+        Wholesale_Markups = settings.get("Wholesale_Markups", [0.22, 0.27, 0.35, 0.47, 0.0])
+        Wholesale_Markups = [float(x) for x in Wholesale_Markups if float(x) != 0.0]
+
+        # Build dynamic headers:
+        # base columns + one column per wholesale markup + retail column
+        headers2 = ["Vendor", "Item", "Qty", "Base Cost", "Unit + Fee"]
+        headers2 += [f"{int(round(m*100))}% Markup" for m in Wholesale_Markups]
+        headers2 += [f"{int(round(Retail_Markup*100))}% Retail"]
+
+        # Build dynamic widths (keep your “mirror” look)
+        # You may tweak these if you get cramped on letter-size pages
+        col_widths2 = [1.5, 1.7, 0.5, 0.8, 0.9]  # base columns
+        col_widths2 += [0.85] * len(Wholesale_Markups)  # each wholesale markup column
+        col_widths2 += [0.85]  # retail column
 
         LEFT_X = 0.5 * inch
-        RIGHT_X = 7.5 * inch
-        BOTTOM_Y = 1.0 * inch                      # bottom margin cutoff
+        BOTTOM_Y = 0.75 * inch
+
+        # Right edge should be based on landscape width + your dynamic columns
+        RIGHT_X = LEFT_X + sum(col_widths2) * inch
+
+        # If you ever need the page bounds:
+        PAGE_W, PAGE_H = land_w, land_h                     # bottom margin cutoff
 
         row_h = 0.20 * inch
         vendor_h = 0.20 * inch
         header_h = 0.22 * inch
         underline_h = 0.10 * inch
 
+        def draw_main_header_page2():
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(1 * inch, land_h - 1 * inch, "Wholesale Invoices - Accounting Report")
+
+            c.setFont("Helvetica", 10)
+            c.drawString(1 * inch, land_h - 1.25 * inch, f"Invoice ID: {invoice_id}")
+            c.drawString(4 * inch, land_h - 1.25 * inch, f"Order Date: {order_date}")
+        
         def draw_page2_header():
-            """
-            Draw page-2 title/meta BELOW the main header/meta and
-            return the y position where the table header should start.
-            """
-            w, h = LETTER
+            w, h = landscape(LETTER)
 
             c.setFont("Helvetica-Bold", 13)
             c.drawString(1 * inch, h - 1.55 * inch, "Pricing & Margin Summary")
 
-            c.setFont("Helvetica", 9)
-            c.drawString(
-                1 * inch,
-                h - 1.75 * inch,
-                f"Case Fee: {money(case_fee)}   |   Wholesale Markup: {pct(Wholesale_Markup)}   |   Retail Markup: {pct(Retail_Markup)}"
-            )
+            wh_list = ", ".join(pct(m) for m in Wholesale_Markups) if Wholesale_Markups else "None"
 
-            # table should start under the page2 meta line
-            return h - 2.05 * inch
+            c.setFont("Helvetica", 9)
+            # Split into two lines so it never runs off:
+            c.drawString(1 * inch, h - 1.75 * inch, f"Case Fee: {money(case_fee)}   |   Retail Markup: {pct(Retail_Markup)}")
+            c.drawString(1 * inch, h - 1.90 * inch, f"Wholesale Markups: {wh_list}")
+
+            return h - 2.20 * inch
 
         def draw_table_header2(y):
             c.setFont("Helvetica-Bold", 9)
@@ -283,10 +304,17 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
 
         def start_page2(on_new_page: bool):
             nonlocal y2
+
+            # If we are appending (options==0) we need a new page before page2
             if on_new_page:
                 c.showPage()
 
-            draw_main_header()
+            # Switch THIS page to landscape
+            c.setPageSize(landscape(LETTER))
+
+            # Use landscape dimensions for placement on page 2
+            # (don't reuse 'height' from portrait)
+            draw_main_header_page2()   # <-- we'll define this below
 
             table_top_y = draw_page2_header()
             y2 = draw_table_header2(table_top_y)
@@ -295,7 +323,8 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
             nonlocal y2
             if (y2 - height_needed) < BOTTOM_Y:
                 c.showPage()
-                draw_main_header()
+                c.setPageSize(landscape(LETTER))   # IMPORTANT: keep landscape on new pages
+                draw_main_header_page2()
                 table_top_y = draw_page2_header()
                 y2 = draw_table_header2(table_top_y)
 
@@ -312,7 +341,8 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
             ensure_room(vendor_h)
 
             # Vendor header row
-            y2 = draw_row2(y2, [vendor, "", "", "", "", "", ""], font="Helvetica-Bold")
+            y2 = draw_row2(y2, [vendor] + [""] * (len(headers2) - 1), font="Helvetica-Bold")
+
 
             for it in items:
                 # Need room for one row
@@ -322,18 +352,19 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
                 qty = int(it["quantity"])
 
                 cost_fee = price_with_fee(unit_price, case_fee)
-                wholesale_sale = markup_price(cost_fee, Wholesale_Markup)
                 retail_sale = markup_price(cost_fee, Retail_Markup)
+                wholesale_sales = [markup_price(cost_fee, m) for m in Wholesale_Markups]
 
                 row2 = [
-                    "",  # vendor already printed above
+                    "",
                     it.get("item_name", ""),
                     qty,
                     money(unit_price),
                     money(cost_fee),
-                    money(wholesale_sale),
-                    money(retail_sale),
                 ]
+                row2 += [money(x) for x in wholesale_sales]
+                row2 += [money(retail_sale)]
+
                 y2 = draw_row2(y2, row2)
 
             # Need room for underline line

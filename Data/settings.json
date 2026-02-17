@@ -18,5 +18,13 @@
         "on_delete": true
     },
     "pdf_filename_format": "invoice_{id}_{date}",
-    "case_fee": 2.0
+    "case_fee": 2.0,
+    "Wholesale_Markups": [
+        0.22,
+        0.34,
+        0.37,
+        0.47,
+        0.7
+    ],
+    "Retail_Markup": 0.5
 }
