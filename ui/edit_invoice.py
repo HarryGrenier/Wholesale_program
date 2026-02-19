@@ -10,6 +10,12 @@ import platform
 import subprocess
 
 
+def pct(x):
+    try:
+        return f"{float(x) * 100:.1f}%"
+    except Exception:
+        return ""
+
 def ask_report_options(master):
     popup = tk.Toplevel(master)
     popup.title("Select reports to include")
@@ -70,7 +76,8 @@ class EditInvoiceWindow(tk.Toplevel):
         self.settings = load_settings()
         
         self.case_fee = float(self.settings.get("case_fee", 0.0))
-        self.Wholesale_Markup = float(self.settings.get("Wholesale_Markup", 0.22))  # 22% markup for wholesale price calculation
+        self._Wholesale_Markups = self.settings.get("Wholesale_Markups", [0.22, 0.0, 0.0, 0.0, 0.0])# 22% markup for wholesale price calculation
+        self.Wholesale_Markup = self._Wholesale_Markups[0]
         self.retail_markup = float(self.settings.get("Retail_Markup", 0.50))     # 50% markup for retail price calculation
         
         def _price_with_fee(val):
@@ -168,11 +175,11 @@ class EditInvoiceWindow(tk.Toplevel):
             "optional_info": (240, True, "center"),
             "Markup_%_wholesale": (150, False, "e"),
             "Wholesale_Sale_Price": (175, False, "w"),
-            "Retail_Sale_Price_50%": (140, False, "e")}
+            f"Retail_Sale_Price_{pct(self.retail_markup)}": (150, False, "e")}
         columns = (
         "vendor", "item", "quantity", "price",
         "price_with_fee", "optional_info", "Markup_%_wholesale",
-        "Wholesale_Sale_Price", "Retail_Sale_Price_50%")
+        "Wholesale_Sale_Price", f"Retail_Sale_Price_{pct(self.retail_markup)}")
         
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=18)
         for col in columns:
@@ -200,7 +207,7 @@ class EditInvoiceWindow(tk.Toplevel):
             row_id = self.tree.identify_row(event.y)
             col_id = self.tree.identify_column(event.x)
             col = int(col_id.replace('#', '')) - 1
-            if columns[col] in ("price_with_fee", "Markup_%_wholesale", "Wholesale_Sale_Price", "Retail_Sale_Price_50%"):
+            if columns[col] in ("price_with_fee", "Markup_%_wholesale", "Wholesale_Sale_Price", f"Retail_Sale_Price_{pct(self.retail_markup)}"):
                 return
             x, y, width, height = self.tree.bbox(row_id, col_id)
             current_val = self.tree.item(row_id)['values'][col]

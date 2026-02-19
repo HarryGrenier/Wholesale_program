@@ -230,7 +230,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
         Retail_Markup = float(settings.get("Retail_Markup", 0.50))
 
         # Pull list + normalize + remove zeros
-        Wholesale_Markups = settings.get("Wholesale_Markups", [0.22, 0.27, 0.35, 0.47, 0.0])
+        Wholesale_Markups = settings.get("Wholesale_Markups", [0.22, 0.0, 0.0, 0.0, 0.0])
         Wholesale_Markups = [float(x) for x in Wholesale_Markups if float(x) != 0.0]
 
         # Build dynamic headers:
@@ -241,7 +241,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
 
         # Build dynamic widths (keep your “mirror” look)
         # You may tweak these if you get cramped on letter-size pages
-        col_widths2 = [1.5, 1.7, 0.5, 0.8, 0.9]  # base columns
+        col_widths2 = [1.25, 2.0, 0.5, 0.8, 0.9]  # base columns
         col_widths2 += [0.85] * len(Wholesale_Markups)  # each wholesale markup column
         col_widths2 += [0.85]  # retail column
 
