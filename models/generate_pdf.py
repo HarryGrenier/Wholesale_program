@@ -261,7 +261,7 @@ def generate_pdf_invoice(invoice_id, order_date, invoice_items, filename="invoic
 
         def draw_main_header_page2():
             c.setFont("Helvetica-Bold", 16)
-            c.drawString(1 * inch, land_h - 1 * inch, "Wholesale Invoices - Accounting Report")
+            c.drawString(1 * inch, land_h - 1 * inch, "Wholesale Invoices - Wholesale Pricing Report")
 
             c.setFont("Helvetica", 10)
             c.drawString(1 * inch, land_h - 1.25 * inch, f"Invoice ID: {invoice_id}")
